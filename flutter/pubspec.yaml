@@ -1,0 +1,51 @@
+name: ocular_sensus
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.6.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  firebase_core: ^3.12.1
+  firebase_auth: ^5.5.1
+  firebase_ui_auth: ^1.16.1
+  shared_preferences: ^2.0.0
+  cloud_firestore: ^5.6.5
+  google_fonts: ^6.2.1
+  image_picker: ^1.1.2
+  mobile_scanner: ^6.0.7
+  permission_handler: ^11.3.0
+  flutter_local_notifications: ^19.0.0
+  path_provider: ^2.1.1
+  scroll_to_index: ^3.0.1
+  geolocator: ^13.0.3
+  scroll_snap_list: ^0.9.1
+  google_maps_flutter: ^2.11.0
+  url_launcher: ^6.3.1
+  animate_do: ^3.0.2
+  path: ^1.8.3
+  http: ^1.3.0
+  flutter_polyline_points: ^2.1.0
+  flutter_dotenv: ^5.2.1
+  location: ^8.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/new_app_icon.png
+    - assets/background.jpg
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/icon.png" 
+  min_sdk_android: 23

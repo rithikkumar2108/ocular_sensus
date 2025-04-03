@@ -1,0 +1,17 @@
+Pillow
+picamera2
+google-ai-generativelanguage
+RPi.GPIO
+pyserial
+gtts
+pygame
+requests
+googlemaps
+SpeechRecognition
+rapidfuzz
+qmc5883l
+twilio
+firebase-admin
+pynmea2
+python-dotenv
+smbus2
