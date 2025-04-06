@@ -278,7 +278,6 @@ def analyse(extra = False):
     #sample_file_2 = PIL.Image.open(image_path_2)
     genai.configure(api_key=GEMINI_API_KEY)
 
-    #Choose a Gemini model.
     model = genai.GenerativeModel(model_name="gemini-1.5-flash")
 
     prompt = "I am blind. Guide me in less than 50 words and warn if anything is concerning." + extraprompt
@@ -306,7 +305,7 @@ def get_gps_data():
                         msg = pynmea2.parse(line)  # Parse NMEA sentence
                         latitude = msg.latitude
                         longitude = msg.longitude
-                        return 12.750091710565329, 80.19927079869741 #latitude,longitude
+                        return latitude,longitude
                           # Stop after getting valid coordinates
                     except pynmea2.ParseError:
                         continue
@@ -445,12 +444,6 @@ def align(sentence):
 
 
 
-#analyse(True)
-
-#navigate()
-
-
-
 valid_commands = [
     "enable proximity",
     "disable proximity",
@@ -486,6 +479,8 @@ flag = False
 
 # Compass - STILL - Emergency
 CHANGE_THRESHOLD = 2  # Degrees (small changes ignored)
+
+#AUTO EMERGENCY, TIME RELATED VARSs
 TIME_LIMIT = 60  # Wait 60 Seconds
 CHECK_INTERVAL = 1  # Check every 1 second
 previous_heading = None
@@ -493,19 +488,22 @@ stable_count = 0  # Counter for stable readings
 
 try:
 
-    last_run = time.time()  # Store the last run time
-    next_run = time.time() + 0.5  # Run after 0.5 sec
+    last_run = time.time()  # Time var for live tracking
+
+
+    next_run = time.time() + 0.5  # Time var for ultrasonic sensor
+
     last_check_time = time.time()  # Tracks last check time for compass module
+
     while True:
     
-        current_time = time.time()
+        current_time = time.time() #Live Time var for compass module
 
     # Check heading only if 1 second has passed
         if current_time - last_check_time >= CHECK_INTERVAL:
             last_check_time = current_time  # Update last check time
             
-            # Simulating compass readings (Replace with actual sensor readings)
-            x, y = 10, 20  # Replace with real x, y values from QMC5883L
+            x, y, z = read_raw_data()
             current_heading = calculate_heading(x, y)
 
             if previous_heading is not None:
