@@ -36,8 +36,11 @@ GMAPS_API_KEY = os.environ.get("GMAPS_API_KEY")
 TRANSLATE_API_KEY = os.environ.get("TRANSLATE_API_KEY")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
+#Initialize Latitude and Longitude
 Latitude = Longitude = 0
 
+
+#Function to send SMS
 def sms(number, message):
     account_sid = SMS_ACCOUNT_SID
     auth_token = SMS_AUTH_TOKEN
@@ -48,7 +51,7 @@ def sms(number, message):
       to=number)
     print(message.sid)
 
-
+#Firebase Setup
 cred = credentials.Certificate(FIREBASE_CRED_FILE_PATH)
 firebase_admin.initialize_app(cred)
 db = firestore.client()
@@ -81,7 +84,6 @@ picam2 = Picamera2()
 
 lang = read_from_firestore("lang")
 print(lang)
-# Your Google Maps API Key
 
 
 # Initialize Google Maps client
@@ -93,7 +95,6 @@ TRIG = 23
 ECHO = 24  
 MOTOR_PIN = 18  # PWM pin for motor (connected to transistor base)
 
-# Define constants
 MAX_DISTANCE = 2.5  # Maximum distance (meters)
 MIN_DISTANCE = 0.3
 MAX_DUTY_CYCLE = 20  # Max PWM value (full vibration)
@@ -106,7 +107,7 @@ GPIO.setup(ECHO, GPIO.IN)
 GPIO.setup(MOTOR_PIN, GPIO.OUT)
 
 # Set up PWM (50Hz frequency)
-pwm = GPIO.PWM(MOTOR_PIN, 50)  # 50Hz frequency
+pwm = GPIO.PWM(MOTOR_PIN, 50) 
 pwm.start(0)  # Start with 0% duty cycle (motor OFF)
 
 
@@ -228,7 +229,7 @@ def text_to_speech(text,  speed=1.5):
 
 def translate(text = "Hello, how are you?"):
 
-    API_KEY = TRANSLATE_API_KEY # Replace with your API key
+    API_KEY = TRANSLATE_API_KEY 
 
 
     url = f"https://translation.googleapis.com/language/translate/v2?key={API_KEY}"
@@ -254,6 +255,7 @@ def get_destination_coordinates(destination):
 
 
 
+#Analyze with GEMINI
 
 def analyse(extra = False):
     picam2.start()
@@ -270,12 +272,10 @@ def analyse(extra = False):
 
     print("Image Captured!")
     image_path_1 = "/tmp/data.jpg" 
-    #image_path_2 = "/home/fouroneeightcrew/Desktop/test.jpg"
 
 
 
     sample_file_1 = PIL.Image.open(image_path_1)
-    #sample_file_2 = PIL.Image.open(image_path_2)
     genai.configure(api_key=GEMINI_API_KEY)
 
     model = genai.GenerativeModel(model_name="gemini-1.5-flash")
@@ -350,6 +350,8 @@ def get_directions(origin, destination):
                 })
 
     return steps  # Returns list of steps
+
+#Function to find distance between 2 coordinates
 def haversine(coord1, coord2):
     R = 6371  # Earth radius in kilometers
     
@@ -400,6 +402,7 @@ def navigate():
         else:
             PlayAudio(PROJ_DIR / "assets/noroutes.mp3")
             print("No Routes")
+            
 def get_vibration_intensity(angle_difference):
     """Calculate vibration intensity based on misalignment."""
     return int((angle_difference / 180) * (MAX_DUTY_CYCLE))
@@ -595,7 +598,6 @@ try:
                         duty_cycle = MAX_DUTY_CYCLE * (1 - normalized)  # Inverted for intensity
                         duty_cycle =  round(duty_cycle, 2)
             
-                        # Update motor PWM intensity
                     pwm.ChangeDutyCycle(duty_cycle)
                         
                     print(f"Distance: {distance}m | Motor PWM: {duty_cycle}%")
