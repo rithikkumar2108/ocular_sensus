@@ -17,20 +17,20 @@ It is built entirely for auditory and tactile interaction. It’s a holistic,
 AI-powered solution designed for true independence of visually impaired people 
 including all the essential features.
 
-### Key Features
+## Key Features
 
-Environmental Analysis  (GEMINI API)
+### Environmental Analysis  (GEMINI API)
 Uses AI to analyze surroundings and audibly describe what’s nearby.
 Detects objects, people, signs, and hazards. Users can ask questions like:
 
     “Where is the bottle in front of me?”
     Output: “It’s on the shelf to your right.”
 
-Navigation (GMAPS API)
+### Navigation (GMAPS API)
 GPS navigation with Google Maps integration.
 Directional guidance is provided via gentle haptic feedback and audio cues to ensure smooth travel.
 
-Emergency System
+### Emergency System
 A built-in emergency system sends the user’s location to a secure server in case of emergency (Firebase)
 
     Local responders are notified immediately.
@@ -41,7 +41,7 @@ A built-in emergency system sends the user’s location to a secure server in ca
 
     Auto-activates if the device detects the user has fainted or is immobile for a long time.
 
-Companion App
+## Companion App
 A dedicated mobile app that allows volunteers to respond during emergencies and enables friends or caregivers to configure device settings.
 
 
