@@ -9,7 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
-import 'help_page.dart'; // Make sure this import is correct
+import 'help_page.dart'; 
 import 'dart:io';
 
 class HomeScreen extends StatefulWidget {
@@ -24,19 +24,19 @@ class _HomeScreenState extends State<HomeScreen> {
   bool deviceIdStored = false;
   bool notificationsEnabled = true;
 
-  // Removed: _nameController, _userName, _isNameEditing, _nameFocusNode
+  
 
   @override
   void initState() {
     super.initState();
     _loadDeviceId();
     _loadNotificationSetting();
-    // Removed: _loadUserName()
+    
   }
 
   @override
   void dispose() {
-    // Removed: _nameController.dispose(), _nameFocusNode.dispose()
+    
     super.dispose();
   }
 
@@ -66,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // Removed: _loadUserName() and _saveUserName() methods
+  
 
   Future<void> _saveDeviceId(String deviceId) async {
     final prefs = await SharedPreferences.getInstance();
@@ -292,7 +292,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(width: 20),
                   ],
                 ),
-                // Removed: Name Container and TextField
+                
                 Expanded(
                   child: Center(
                       child: Container(

@@ -7,10 +7,10 @@ import 'centered_scrolling_list.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'home.dart';
 
-// --- NEW IMPORTS FOR FIREBASE STORAGE AND IMAGE PICKER ---
+
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io'; // For File
+import 'dart:io'; 
 
 class DevicePage extends StatefulWidget {
   final String deviceId;
@@ -385,7 +385,7 @@ class _DevicePageState extends State<DevicePage> {
                   inactiveThumbColor: const Color.fromARGB(255, 255, 255, 255),
                 ),
                 IconButton(
-  icon: const Icon(Icons.logout, color: Colors.white), // Choose your icon and color
+  icon: const Icon(Icons.logout, color: Colors.white), 
   onPressed: () {
     _logout(context);
   },
@@ -393,12 +393,12 @@ class _DevicePageState extends State<DevicePage> {
               ],
             ),
           ),
-          // Removed the edit icon IconButton here
+          
         ],
         iconTheme: const IconThemeData(
-            color: Colors.white), // Sets color for all icons, including the back arrow, if no leading is defined.
+            color: Colors.white), 
         leading: IconButton(
-          // explicitly making the leading icon white and setting the navigation
+          
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
@@ -426,17 +426,17 @@ class _DevicePageState extends State<DevicePage> {
             physics: const NeverScrollableScrollPhysics(),
             children: [
               LayoutBuilder(
-                // Use LayoutBuilder
+                
                 builder:
                     (BuildContext context, BoxConstraints viewportConstraints) {
                   return SingleChildScrollView(
                     child: ConstrainedBox(
-                        // Use ConstrainedBox
+                        
                         constraints: BoxConstraints(
                           minHeight: viewportConstraints.maxHeight,
                         ),
                         child: IntrinsicHeight(
-                            // Use IntrinsicHeight
+                            
                             child: Center(
                                 child: Column(
                                     mainAxisAlignment:
@@ -445,12 +445,12 @@ class _DevicePageState extends State<DevicePage> {
                                   Column(
                                     children: [
                                       const SizedBox(height: 80),
-                                      // Device ID is now below the app bar, directly visible.
+                                      
                                       Text('Device ID: ${widget.deviceId}',
                                           style: const TextStyle(
                                               color: Color.fromARGB(
                                                   255, 255, 255, 255))),
-                                      // --- NEW: Profile Picture Area ---
+                                      
                                       const SizedBox(height: 10),
                                       GestureDetector(
                                         onTap: _editProfile ? _pickAndUploadImage : null,
@@ -489,7 +489,7 @@ class _DevicePageState extends State<DevicePage> {
                                         ),
                                       ),
                                       const SizedBox(height: 10),
-                                      // --- END NEW: Profile Picture Area ---
+                                      
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
@@ -498,19 +498,19 @@ class _DevicePageState extends State<DevicePage> {
                                             style: TextStyle(color: Colors.white),
                                           ),
                                           Container(
-                                            // Wrap DropdownButton in Container for styling
+                                            
                                             margin: const EdgeInsets.only(
-                                                top: 8), // Bring the top down
+                                                top: 8), 
                                             decoration: BoxDecoration(
                                               borderRadius: BorderRadius.circular(
-                                                  20), // Make it rounder
+                                                  20), 
                                               border: Border.all(
                                                   color: Colors.white.withOpacity(
-                                                      0.3)), // Optional border
+                                                      0.3)), 
                                             ),
                                             child: ConstrainedBox(
                                               constraints: const BoxConstraints(
-                                                  maxWidth: 120), // Less width
+                                                  maxWidth: 120), 
                                               child: DropdownButton<String>(
                                                 value: _selectedLanguage,
                                                 items: <DropdownMenuItem<String>>[
@@ -551,7 +551,7 @@ class _DevicePageState extends State<DevicePage> {
                                                     child: Text('    Marathi'),
                                                   ),
                                                   const DropdownMenuItem<String>(
-                                                    value: 'pa', // Punjabi (Gurmukhi script)
+                                                    value: 'pa', 
                                                     child: Text('    Punjabi'),
                                                   ),
                                                   const DropdownMenuItem<String>(
@@ -559,80 +559,80 @@ class _DevicePageState extends State<DevicePage> {
                                                     child: Text('    Urdu'),
                                                   ),
                                                   const DropdownMenuItem<String>(
-                                                    value: 'or', // Odia (formerly Oriya)
+                                                    value: 'or', 
                                                     child: Text('    Odia'),
                                                   ),
                                                   const DropdownMenuItem<String>(
-                                                    value: 'as', // Assamese
+                                                    value: 'as', 
                                                     child: Text('    Assamese'),
                                                   ),
                                                   const DropdownMenuItem<String>(
-                                                    value: 'mai', // Maithili
+                                                    value: 'mai', 
                                                     child: Text('    Maithili'),
                                                   ),
                                                   const DropdownMenuItem<String>(
-                                                    value: 'lus', // Mizo
+                                                    value: 'lus', 
                                                     child: Text('    Mizo'),
                                                   ),
                                                   const DropdownMenuItem<String>(
-                                                    value: 'gom', // Konkani
+                                                    value: 'gom', 
                                                     child: Text('    Konkani'),
                                                   ),
                                                   const DropdownMenuItem<String>(
-                                                    value: 'mni-Mtei', // Meiteilon (Manipuri), using specific script code
+                                                    value: 'mni-Mtei', 
                                                     child: Text('    Manipuri'),
                                                   ),
                                                   const DropdownMenuItem<String>(
-                                                    value: 'sa', // Sanskrit
+                                                    value: 'sa', 
                                                     child: Text('    Sanskrit'),
                                                   ),
                                                   const DropdownMenuItem<String>(
-                                                    value: 'awa', // Awadhi
+                                                    value: 'awa', 
                                                     child: Text('    Awadhi'),
                                                   ),
                                                   const DropdownMenuItem<String>(
-                                                    value: 'bho', // Bhojpuri
+                                                    value: 'bho', 
                                                     child: Text('    Bhojpuri'),
                                                   ),
                                                   const DropdownMenuItem<String>(
-                                                    value: 'doi', // Dogri
+                                                    value: 'doi', 
                                                     child: Text('    Dogri'),
                                                   ),
                                                   const DropdownMenuItem<String>(
-                                                    value: 'kha', // Khasi
+                                                    value: 'kha', 
                                                     child: Text('    Khasi'),
                                                   ),
                                                   const DropdownMenuItem<String>(
-                                                    value: 'kok', // Kokborok
+                                                    value: 'kok', 
                                                     child: Text('    Kokborok'),
                                                   ),
                                                   const DropdownMenuItem<String>(
-                                                    value: 'brx', // Bodo (Standard ISO code)
+                                                    value: 'brx', 
                                                     child: Text('    Bodo'),
                                                   ),
                                                   const DropdownMenuItem<String>(
-                                                    value: 'mwr', // Marwari (ISO 639-3, commonly used code)
+                                                    value: 'mwr', 
                                                     child: Text('    Marwari'),
                                                   ),
                                                   const DropdownMenuItem<String>(
-                                                    value: 'sat', // Santali
+                                                    value: 'sat', 
                                                     child: Text('    Santali'),
                                                   ),
                                                   const DropdownMenuItem<String>(
-                                                    value: 'tcy', // Tulu
+                                                    value: 'tcy', 
                                                     child: Text('    Tulu'),
                                                   ),
                                                   const DropdownMenuItem<String>(
-                                                    value: 'ks', // Kashmiri
+                                                    value: 'ks', 
                                                     child: Text('    Kashmiri'),
                                                   ),
                                                   const DropdownMenuItem<String>(
-                                                    value: 'ne', // Nepali (Widely spoken in parts of India)
+                                                    value: 'ne', 
                                                     child: Text('    Nepali'),
                                                   ),
-                                                  // Retaining your original international languages
+                                                  
                                                   const DropdownMenuItem<String>(
-                                                    value: 'zh-CN', // Chinese (Simplified) - often distinct from zh-TW
+                                                    value: 'zh-CN', 
                                                     child: Text('    Chinese'),
                                                   ),
                                                   const DropdownMenuItem<String>(
@@ -675,7 +675,7 @@ class _DevicePageState extends State<DevicePage> {
                                                 isExpanded: true,
                                                 menuMaxHeight: 200,
                                                 alignment: AlignmentDirectional.centerStart,
-                                                borderRadius: BorderRadius.circular(20), // round the dropdown
+                                                borderRadius: BorderRadius.circular(20), 
                                               ),
                                             ),
                                           ),
@@ -683,7 +683,7 @@ class _DevicePageState extends State<DevicePage> {
                                       ),
                                     ],
                                   ),
-                                  // Contacts section with plus button
+                                  
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
@@ -692,16 +692,16 @@ class _DevicePageState extends State<DevicePage> {
                                               color: Color.fromARGB(
                                                   255, 255, 255, 255),
                                               fontSize: 25)),
-                                      if (_editProfile) // Show plus button only in edit mode
+                                      if (_editProfile) 
                                         IconButton(
   onPressed: () => _addContact(context),
   icon: CircleAvatar(
-    radius: 15, // Half of the desired total icon size (30 / 2) for the white circle
-    backgroundColor: const Color.fromARGB(166, 38, 134, 203), // The white circular background
+    radius: 15, 
+    backgroundColor: const Color.fromARGB(166, 38, 134, 203), 
     child: const Icon(
-      Icons.add, // Changed to a simpler plus icon
-      color: Colors.white, // The blue color for the plus sign itself (now fully opaque)
-      size: 20, // A slightly smaller size for the plus sign to fit inside the white circle
+      Icons.add, 
+      color: Colors.white, 
+      size: 20, 
     ),
   ),
 ),
@@ -715,12 +715,12 @@ class _DevicePageState extends State<DevicePage> {
                                     decoration: BoxDecoration(
                                       border: Border.all(
                                         color: const Color.fromARGB(107, 132, 167,
-                                            187), // White margin color
+                                            187), 
                                         width:
-                                            4.0, // Thick margin width (adjust as needed)
+                                            4.0, 
                                       ),
                                       borderRadius: BorderRadius.circular(
-                                          10.0), // Optional: rounded corners for the margin
+                                          10.0), 
                                     ),
                                     child: CenteredScrollingList(
                                       contacts: _contacts,
@@ -740,7 +740,7 @@ class _DevicePageState extends State<DevicePage> {
             ]),
       ),
       bottomNavigationBar: Container(
-        color: Colors.transparent, // Fully transparent container
+        color: Colors.transparent, 
         child: BottomNavigationBar(
           backgroundColor: const Color.fromARGB(94, 17, 49, 60),
           items: const <BottomNavigationBarItem>[
@@ -810,7 +810,7 @@ class _LiveLocationContentState extends State<LiveLocationContent> {
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
-    _mapController!.setMapStyle(_darkMapStyle); // Apply dark style
+    _mapController!.setMapStyle(_darkMapStyle); 
   }
 
   Future<void> _openGoogleMaps() async {
@@ -942,15 +942,15 @@ class _LiveLocationContentState extends State<LiveLocationContent> {
     _openGoogleMaps();
   },
   style: ElevatedButton.styleFrom(
-    backgroundColor: const Color.fromARGB(255, 26, 51, 57), // Keep button background color
-    foregroundColor: Colors.white, // Text color
-    elevation: 8, // Increase elevation to create a noticeable shadow
-    shadowColor: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.5), // Custom shadow color with some opacity
-    shape: RoundedRectangleBorder( // Define the shape for the border
-      borderRadius: BorderRadius.circular(20), // Optional: add some corner radius if desired
+    backgroundColor: const Color.fromARGB(255, 26, 51, 57), 
+    foregroundColor: Colors.white, 
+    elevation: 8, 
+    shadowColor: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.5), 
+    shape: RoundedRectangleBorder( 
+      borderRadius: BorderRadius.circular(20), 
       side: const BorderSide(
-        color: Color.fromARGB(106, 38, 79, 82), // White border color
-        width: 2, // Border thickness
+        color: Color.fromARGB(106, 38, 79, 82), 
+        width: 2, 
       ),
     ),
   ),

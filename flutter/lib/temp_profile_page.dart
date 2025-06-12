@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:photo_view/photo_view.dart'; // Import PhotoView
+import 'package:photo_view/photo_view.dart'; 
 
 class TempProfilePage extends StatefulWidget {
   final String? deviceId;
@@ -73,13 +73,13 @@ class _TempProfilePageState extends State<TempProfilePage> {
     }
   }
 
-  // Function to navigate to a full-screen image view
+  
   void _showFullScreenImage(BuildContext context, String imageUrl) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => Scaffold(
           appBar: AppBar(
-            backgroundColor: Colors.black, // Dark background for image view
+            backgroundColor: Colors.black, 
             iconTheme: const IconThemeData(color: Colors.white),
             title: const Text(
               'Image of Rescuee',
@@ -87,12 +87,12 @@ class _TempProfilePageState extends State<TempProfilePage> {
             ),
           ),
           body: Container(
-            color: Colors.black, // Ensure entire background is black
+            color: Colors.black, 
             child: PhotoView(
               imageProvider: NetworkImage(imageUrl),
               minScale: PhotoViewComputedScale.contained * 0.8,
               maxScale: PhotoViewComputedScale.covered * 2,
-              heroAttributes: PhotoViewHeroAttributes(tag: imageUrl), // Hero animation tag
+              heroAttributes: PhotoViewHeroAttributes(tag: imageUrl), 
               backgroundDecoration: const BoxDecoration(
                 color: Colors.black,
               ),
@@ -114,7 +114,7 @@ class _TempProfilePageState extends State<TempProfilePage> {
         shadowColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         title: const Text(
-          'Rescuee Info', // AppBar title is now consistent
+          'Rescuee Info', 
           style: TextStyle(color: Color.fromARGB(255, 255, 255, 255), fontSize: 18),
         ),
         iconTheme: const IconThemeData(
@@ -169,19 +169,19 @@ class _TempProfilePageState extends State<TempProfilePage> {
                           style: const TextStyle(fontSize: 18, color: Colors.redAccent),
                         )
                       else ...[
-                        // Wrap the CircleAvatar with a GestureDetector
+                        
                         GestureDetector(
                           onTap: () {
                             if (_profilePicUrl != null && _profilePicUrl!.isNotEmpty) {
                               _showFullScreenImage(context, _profilePicUrl!);
                             }
                           },
-                          child: Hero( // Wrap with Hero for animation
-                            tag: _profilePicUrl ?? 'default_profile_pic', // Unique tag for Hero animation
+                          child: Hero( 
+                            tag: _profilePicUrl ?? 'default_profile_pic', 
                             child: Container(
                               margin: const EdgeInsets.only(bottom: 20.0),
                               child: CircleAvatar(
-                                radius: 125, // Keep a sensible size for the main page
+                                radius: 125, 
                                 backgroundColor: Colors.white.withOpacity(0.2),
                                 backgroundImage: _profilePicUrl != null && _profilePicUrl!.isNotEmpty
                                     ? NetworkImage(_profilePicUrl!) as ImageProvider<Object>?
