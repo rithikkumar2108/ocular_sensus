@@ -14,7 +14,6 @@ class AuthGate extends StatelessWidget {
         if (!snapshot.hasData) {
           return Stack(
             children: [
-              // Background Gradient Container
               Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
@@ -29,50 +28,41 @@ class AuthGate extends StatelessWidget {
                   ),
                 ),
               ),
-              // Fully Transparent SignInScreen
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 45),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20), // Rounded corners
+                  borderRadius: BorderRadius.circular(20),
                   child: Material(
-                    color: const Color.fromARGB(40, 145, 141, 141), // Ensure Material is transparent
+                    color: const Color.fromARGB(40, 145, 141, 141),
                     child: Theme(
                       data: ThemeData.dark().copyWith(
                         cardTheme: const CardTheme(
-                          color: Color.fromARGB(180, 0, 0, 0), // Slight transparency
-                          shadowColor: Colors.transparent, // Removes shadow
+                          color: Color.fromARGB(180, 0, 0, 0),
+                          shadowColor: Colors.transparent,
                         ),
-                        scaffoldBackgroundColor: const Color.fromARGB(0, 255, 255, 255), // Keep background transparent
-                        dialogBackgroundColor: const Color.fromARGB(180, 0, 0, 0), // Slightly transparent pop-ups
+                        scaffoldBackgroundColor: const Color.fromARGB(0, 255, 255, 255),
+                        dialogBackgroundColor: const Color.fromARGB(180, 0, 0, 0),
                       ),
                       child: SignInScreen(
-                        providers: [
-                          EmailAuthProvider(),
-                        ],
+                        providers: [EmailAuthProvider()],
                         headerBuilder: (context, constraints, shrinkOffset) {
                           return Padding(
                             padding: const EdgeInsets.all(20),
                             child: AspectRatio(
                               aspectRatio: 1,
-                              child: Image.asset(
-                                "assets/new_app_icon.png",
-                                fit: BoxFit.contain,
-                              ),
+                              child: Image.asset("assets/new_app_icon.png", fit: BoxFit.contain),
                             ),
                           );
                         },
                         subtitleBuilder: (context, action) {
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8.0),
-                            child: action == AuthAction.signIn
-                                ? const Text(
-                                    'Welcome to Ocular Sensus, please sign in!',
-                                    style: TextStyle(color: Colors.white),
-                                  )
-                                : const Text(
-                                    'Sign up to be a part of this awesome community!!!',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
+                            child: Text(
+                              action == AuthAction.signIn
+                                  ? 'Welcome to Ocular Sensus, please sign in!'
+                                  : 'Sign up to be a part of this awesome community!!!',
+                              style: const TextStyle(color: Colors.white),
+                            ),
                           );
                         },
                         actions: [
@@ -81,8 +71,8 @@ class AuthGate extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => Scaffold(
-                                  backgroundColor: Colors.transparent, // Ensure Scaffold is transparent
-                                  body: Container( // Apply gradient directly to ForgotPasswordScreen
+                                  backgroundColor: Colors.transparent,
+                                  body: Container(
                                     decoration: const BoxDecoration(
                                       gradient: LinearGradient(
                                         begin: Alignment.topLeft,

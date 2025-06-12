@@ -7,6 +7,11 @@ import 'centered_scrolling_list.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'home.dart';
 
+// --- NEW IMPORTS FOR FIREBASE STORAGE AND IMAGE PICKER ---
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io'; // For File
+
 class DevicePage extends StatefulWidget {
   final String deviceId;
 
@@ -21,53 +26,23 @@ class _DevicePageState extends State<DevicePage> {
   List<Map<String, dynamic>> _contacts = [];
   bool _isLoading = true;
   String? _errorMessage;
+  late TextEditingController _ownerNameController;
   bool _editProfile = false;
   int _selectedIndex = 0;
+  bool _isEditingOwnerName = false;
   String _selectedLanguage = 'en';
   late PageController _pageController;
+  String? _profilePicUrl;
 
   @override
   void initState() {
     super.initState();
-    _fetchOwnerName();
-    _fetchLanguage();
+    _ownerNameController = TextEditingController();
+    _fetchDeviceData();
     _pageController = PageController(initialPage: _selectedIndex);
   }
 
-  Future<void> _updateDeviceLanguage(String languageCode) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('devices')
-          .doc(widget.deviceId)
-          .update({'lang': languageCode});
-      print('Language updated to $languageCode');
-    } catch (e) {
-      print('Error updating language: $e');
-    }
-  }
-
-  Future<void> _fetchLanguage() async {
-    try {
-      DocumentSnapshot deviceSnapshot = await FirebaseFirestore.instance
-          .collection('devices')
-          .doc(widget.deviceId)
-          .get();
-
-      if (deviceSnapshot.exists) {
-        String fetchedLanguage =
-            deviceSnapshot['lang'] ?? 'en'; // Default to 'en' if 'lang' is null
-        setState(() {
-          _selectedLanguage = fetchedLanguage;
-        });
-      } else {
-        print('Device document not found for deviceId: ${widget.deviceId}');
-      }
-    } catch (e) {
-      print('Error fetching language: $e');
-    }
-  }
-
-  Future<void> _fetchOwnerName() async {
+  Future<void> _fetchDeviceData() async {
     try {
       final doc = await FirebaseFirestore.instance
           .collection('devices')
@@ -84,7 +59,10 @@ class _DevicePageState extends State<DevicePage> {
                         })
                     .toList() ??
                 [];
+            _selectedLanguage = doc.data()?['lang'] ?? 'en';
+            _profilePicUrl = doc.data()?['profilePic'] as String?;
             _isLoading = false;
+            _ownerNameController.text = _ownerName ?? '';
           });
         }
       } else {
@@ -102,6 +80,66 @@ class _DevicePageState extends State<DevicePage> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _updateDeviceLanguage(String languageCode) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('devices')
+          .doc(widget.deviceId)
+          .update({'lang': languageCode});
+      print('Language updated to $languageCode');
+    } catch (e) {
+      print('Error updating language: $e');
+      _showSnackBar(context, 'Failed to update language: $e');
+    }
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    if (!_editProfile) return;
+
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+        });
+      }
+      try {
+        File file = File(image.path);
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('profile_pictures/${widget.deviceId}/profile_pic.jpg');
+
+        await storageRef.putFile(file);
+        final downloadURL = await storageRef.getDownloadURL();
+
+        await FirebaseFirestore.instance
+            .collection('devices')
+            .doc(widget.deviceId)
+            .update({'profilePic': downloadURL});
+
+        if (mounted) {
+          setState(() {
+            _profilePicUrl = downloadURL;
+            _isLoading = false;
+          });
+        }
+        _showSnackBar(context, 'Profile picture updated successfully!');
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        _showSnackBar(context, 'Failed to upload profile picture: $e');
+        print('Error uploading profile picture: $e');
+      }
+    } else {
+      _showSnackBar(context, 'No image selected.');
     }
   }
 
@@ -130,50 +168,33 @@ class _DevicePageState extends State<DevicePage> {
   }
 
   void _showSnackBar(BuildContext context, String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _editName(BuildContext context) async {
-    if (!_editProfile) return;
-    String? newName = await showDialog<String>(
-      context: context,
-      builder: (BuildContext context) {
-        String tempName = _ownerName ?? '';
-        return AlertDialog(
-          title: const Text('Edit Name'),
-          content: TextField(
-            onChanged: (value) {
-              tempName = value;
-            },
-            controller: TextEditingController(text: _ownerName),
-            decoration: const InputDecoration(hintText: "Enter new name"),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop(tempName);
-              },
-            ),
-          ],
-        );
-      },
-    );
-    if (newName != null && newName.isNotEmpty) {
-      setState(() {
-        _ownerName = newName;
-      });
-      _updateDeviceData();
+  Future<void> _updateOwnerName(String newName) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('devices')
+          .doc(widget.deviceId)
+          .update({'ownerName': newName});
+
+      if (mounted) {
+        setState(() {
+          _ownerName = newName;
+        });
+      }
+      print('Owner name updated successfully to: $newName');
+    } catch (e) {
+      print('Error updating owner name: $e');
     }
   }
 
   Future<void> _addContact(BuildContext context) async {
+    String tempName = '';
+    String tempPhone = '';
     Map<String, String>? newContact = await showDialog<Map<String, String>>(
       context: context,
       builder: (BuildContext context) {
-        String tempName = '';
-        String tempPhone = '';
         return AlertDialog(
           title: const Text('Add Contact'),
           content: Column(
@@ -241,8 +262,8 @@ class _DevicePageState extends State<DevicePage> {
                 onChanged: (value) {
                   tempName = value;
                 },
-                controller: TextEditingController(
-                    text: _contacts[index]['contact_name']),
+                controller:
+                    TextEditingController(text: _contacts[index]['contact_name']),
                 decoration: const InputDecoration(hintText: "Contact Name"),
               ),
               TextField(
@@ -281,6 +302,7 @@ class _DevicePageState extends State<DevicePage> {
 
   @override
   void dispose() {
+    _ownerNameController.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -300,30 +322,89 @@ class _DevicePageState extends State<DevicePage> {
       extendBodyBehindAppBar: true,
       extendBody: true,
       appBar: AppBar(
-          backgroundColor: Color.fromARGB(0, 44, 76, 89),
-          title: Text(
-              _ownerName != null
-                  ? '$_ownerName\'s Device '
-                  : 'Device: ${widget.deviceId}',
-              style: TextStyle(color: Color.fromARGB(255, 255, 255, 255))),
-          actions: [
-            if (_editProfile)
-              IconButton(
-                icon: const Icon(Icons.edit,
-                    color: Color.fromARGB(255, 255, 255, 255)),
-                onPressed: () => _editName(context),
+        backgroundColor: const Color.fromARGB(0, 44, 76, 89),
+        title: _editProfile
+            ? TextField(
+                controller: _ownerNameController,
+                onChanged: (newValue) {
+                  _ownerName = newValue;
+                },
+                onSubmitted: (newValue) {
+                  _updateOwnerName(newValue);
+                  FocusScope.of(context).unfocus();
+                  setState(() {
+                    _isEditingOwnerName = false;
+                  });
+                },
+                style: const TextStyle(color: Color.fromARGB(255, 255, 255, 255), fontSize: 20),
+                cursorColor: Colors.white,
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                  border: InputBorder.none,
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white.withOpacity(0.7)),
+                  ),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+                  ),
+                ),
+              )
+            : GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _isEditingOwnerName = true;
+                  });
+                  _ownerNameController.text = _ownerName ?? '';
+                  _ownerNameController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: _ownerNameController.text.length),
+                  );
+                },
+                child: Text(
+                  '${_ownerName!}\'s Device',
+                  style: const TextStyle(color: Color.fromARGB(255, 255, 255, 255), fontSize: 20),
+                ),
               ),
-          ],
-          iconTheme: const IconThemeData(
-              color: Colors
-                  .white), // Sets color for all icons, including the back arrow, if no leading is defined.
-          leading: IconButton(
-            // explicitly making the leading icon white and setting the navigation
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.of(context).pop(),
-          )),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: Row(
+              children: [
+                Switch(
+                  value: _editProfile,
+                  onChanged: (value) {
+                    setState(() {
+                      _editProfile = value;
+                      if (!value && _ownerName != null) {
+                        _updateOwnerName(_ownerName!);
+                      }
+                    });
+                  },
+                  activeColor: const Color.fromARGB(0, 38, 134, 203),
+                  inactiveTrackColor: const Color.fromARGB(255, 255, 255, 255).withOpacity(0),
+                  inactiveThumbColor: const Color.fromARGB(255, 255, 255, 255),
+                ),
+                IconButton(
+  icon: const Icon(Icons.logout, color: Colors.white), // Choose your icon and color
+  onPressed: () {
+    _logout(context);
+  },
+)
+              ],
+            ),
+          ),
+          // Removed the edit icon IconButton here
+        ],
+        iconTheme: const IconThemeData(
+            color: Colors.white), // Sets color for all icons, including the back arrow, if no leading is defined.
+        leading: IconButton(
+          // explicitly making the leading icon white and setting the navigation
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -361,175 +442,297 @@ class _DevicePageState extends State<DevicePage> {
                                     mainAxisAlignment:
                                         MainAxisAlignment.spaceEvenly,
                                     children: [
-                              Column(
-                                children: [
-                                  SizedBox(height: 80),
-                                  Text('Device ID: ${widget.deviceId}',
-                                      style: TextStyle(
-                                          color: Color.fromARGB(
-                                              255, 255, 255, 255))),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
+                                  Column(
                                     children: [
-                                      Text(
-                                        "Language: ",
-                                        style: TextStyle(color: Colors.white),
+                                      const SizedBox(height: 80),
+                                      // Device ID is now below the app bar, directly visible.
+                                      Text('Device ID: ${widget.deviceId}',
+                                          style: const TextStyle(
+                                              color: Color.fromARGB(
+                                                  255, 255, 255, 255))),
+                                      // --- NEW: Profile Picture Area ---
+                                      const SizedBox(height: 10),
+                                      GestureDetector(
+                                        onTap: _editProfile ? _pickAndUploadImage : null,
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 60,
+                                              backgroundColor: Colors.white.withOpacity(0.2),
+                                              backgroundImage: _profilePicUrl != null && _profilePicUrl!.isNotEmpty
+                                                  ? NetworkImage(_profilePicUrl!) as ImageProvider<Object>?
+                                                  : null,
+                                              child: _profilePicUrl == null || _profilePicUrl!.isEmpty
+                                                  ? Icon(
+                                                      Icons.person,
+                                                      size: 80,
+                                                      color: Colors.white.withOpacity(0.7),
+                                                    )
+                                                  : null,
+                                            ),
+                                            if (_editProfile)
+                                              Positioned(
+                                                bottom: 0,
+                                                right: 0,
+                                                child: CircleAvatar(
+                                                  radius: 20,
+                                                  backgroundColor: const Color.fromARGB(166, 38, 134, 203),
+                                                  child: Icon(
+                                                    Icons.camera_alt,
+                                                    color: Colors.white,
+                                                    size: 20,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
                                       ),
-                                      Container(
-                                        // Wrap DropdownButton in Container for styling
-                                        margin: EdgeInsets.only(
-                                            top: 8), // Bring the top down
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                              20), // Make it rounder
-                                          border: Border.all(
-                                              color: Colors.white.withOpacity(
-                                                  0.3)), // Optional border
-                                        ),
-                                        child: ConstrainedBox(
-                                          constraints: BoxConstraints(
-                                              maxWidth: 120), // Less width
-                                          child: DropdownButton<String>(
-                                            value: _selectedLanguage,
-                                            items: <DropdownMenuItem<String>>[
-                                              DropdownMenuItem<String>(
-                                                  value: 'en',
-                                                  child: Text('    English')),
-                                              DropdownMenuItem<String>(
-                                                  value: 'ta',
-                                                  child: Text('    Tamil')),
-                                              DropdownMenuItem<String>(
-                                                  value: 'ml',
-                                                  child: Text('    Malayalam')),
-                                              DropdownMenuItem<String>(
-                                                  value: 'te',
-                                                  child: Text('    Telegu')),
-                                              DropdownMenuItem<String>(
-                                                  value: 'kn',
-                                                  child: Text('    Kannada')),
-                                              DropdownMenuItem<String>(
-                                                  value: 'hi',
-                                                  child: Text('    Hindi')),
-                                              DropdownMenuItem<String>(
-                                                  value: 'zh-TW',
-                                                  child: Text('    Chinese')),
-                                              DropdownMenuItem<String>(
-                                                  value: 'ja',
-                                                  child: Text('    Japanese')),
-                                              DropdownMenuItem<String>(
-                                                  value: 'ko',
-                                                  child: Text('    Korean')),
-                                              DropdownMenuItem<String>(
-                                                  value: 'ru',
-                                                  child: Text('    Russian')),
-                                              DropdownMenuItem<String>(
-                                                  value: 'es',
-                                                  child: Text('    Spanish')),
-                                              DropdownMenuItem<String>(
-                                                  value: 'fr',
-                                                  child: Text('    French')),
-                                              DropdownMenuItem<String>(
-                                                  value: 'de',
-                                                  child: Text('    German')),
-                                            ],
-                                            onChanged: (String? newValue) {
-                                              if (newValue != null) {
-                                                setState(() {
-                                                  _selectedLanguage = newValue;
-                                                  _updateDeviceLanguage(
-                                                      newValue);
-                                                });
-                                              }
-                                            },
-                                            dropdownColor: const Color.fromARGB(
-                                                    208, 47, 72, 79)
-                                                .withOpacity(1),
-                                            style:
-                                                TextStyle(color: Colors.white),
-                                            icon: Icon(Icons.arrow_drop_down,
-                                                color: Colors.white),
-                                            underline: Container(),
-                                            isExpanded: true,
-                                            menuMaxHeight: 200,
-                                            alignment: AlignmentDirectional
-                                                .centerStart,
-                                            borderRadius: BorderRadius.circular(
-                                                20), // round the dropdown
+                                      const SizedBox(height: 10),
+                                      // --- END NEW: Profile Picture Area ---
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Text(
+                                            "Language: ",
+                                            style: TextStyle(color: Colors.white),
                                           ),
-                                        ),
+                                          Container(
+                                            // Wrap DropdownButton in Container for styling
+                                            margin: const EdgeInsets.only(
+                                                top: 8), // Bring the top down
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(
+                                                  20), // Make it rounder
+                                              border: Border.all(
+                                                  color: Colors.white.withOpacity(
+                                                      0.3)), // Optional border
+                                            ),
+                                            child: ConstrainedBox(
+                                              constraints: const BoxConstraints(
+                                                  maxWidth: 120), // Less width
+                                              child: DropdownButton<String>(
+                                                value: _selectedLanguage,
+                                                items: <DropdownMenuItem<String>>[
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'en',
+                                                    child: Text('    English'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'hi',
+                                                    child: Text('    Hindi'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'ta',
+                                                    child: Text('    Tamil'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'ml',
+                                                    child: Text('    Malayalam'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'te',
+                                                    child: Text('    Telugu'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'kn',
+                                                    child: Text('    Kannada'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'bn',
+                                                    child: Text('    Bengali'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'gu',
+                                                    child: Text('    Gujarati'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'mr',
+                                                    child: Text('    Marathi'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'pa', // Punjabi (Gurmukhi script)
+                                                    child: Text('    Punjabi'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'ur',
+                                                    child: Text('    Urdu'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'or', // Odia (formerly Oriya)
+                                                    child: Text('    Odia'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'as', // Assamese
+                                                    child: Text('    Assamese'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'mai', // Maithili
+                                                    child: Text('    Maithili'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'lus', // Mizo
+                                                    child: Text('    Mizo'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'gom', // Konkani
+                                                    child: Text('    Konkani'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'mni-Mtei', // Meiteilon (Manipuri), using specific script code
+                                                    child: Text('    Manipuri'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'sa', // Sanskrit
+                                                    child: Text('    Sanskrit'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'awa', // Awadhi
+                                                    child: Text('    Awadhi'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'bho', // Bhojpuri
+                                                    child: Text('    Bhojpuri'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'doi', // Dogri
+                                                    child: Text('    Dogri'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'kha', // Khasi
+                                                    child: Text('    Khasi'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'kok', // Kokborok
+                                                    child: Text('    Kokborok'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'brx', // Bodo (Standard ISO code)
+                                                    child: Text('    Bodo'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'mwr', // Marwari (ISO 639-3, commonly used code)
+                                                    child: Text('    Marwari'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'sat', // Santali
+                                                    child: Text('    Santali'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'tcy', // Tulu
+                                                    child: Text('    Tulu'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'ks', // Kashmiri
+                                                    child: Text('    Kashmiri'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'ne', // Nepali (Widely spoken in parts of India)
+                                                    child: Text('    Nepali'),
+                                                  ),
+                                                  // Retaining your original international languages
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'zh-CN', // Chinese (Simplified) - often distinct from zh-TW
+                                                    child: Text('    Chinese'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'ja',
+                                                    child: Text('    Japanese'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'ko',
+                                                    child: Text('    Korean'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'ru',
+                                                    child: Text('    Russian'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'es',
+                                                    child: Text('    Spanish'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'fr',
+                                                    child: Text('    French'),
+                                                  ),
+                                                  const DropdownMenuItem<String>(
+                                                    value: 'de',
+                                                    child: Text('    German'),
+                                                  ),
+                                                ],
+                                                onChanged: (String? newValue) {
+                                                  if (newValue != null) {
+                                                    setState(() {
+                                                      _selectedLanguage = newValue;
+                                                      _updateDeviceLanguage(newValue);
+                                                    });
+                                                  }
+                                                },
+                                                dropdownColor: const Color.fromARGB(208, 47, 72, 79).withOpacity(1),
+                                                style: const TextStyle(color: Colors.white),
+                                                icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
+                                                underline: Container(),
+                                                isExpanded: true,
+                                                menuMaxHeight: 200,
+                                                alignment: AlignmentDirectional.centerStart,
+                                                borderRadius: BorderRadius.circular(20), // round the dropdown
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
-                                  SizedBox(height: 20),
-                                  Text("Contacts:-",
-                                      style: TextStyle(
-                                          color: Color.fromARGB(
-                                              255, 255, 255, 255),
-                                          fontSize: 25)),
-                                ],
-                              ),
-                              Container(
-                                height: 300,
-                                width: 300,
-                                margin: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 10),
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: Color.fromARGB(107, 132, 167,
-                                        187), // White margin color
-                                    width:
-                                        4.0, // Thick margin width (adjust as needed)
+                                  // Contacts section with plus button
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Text("Contacts:-",
+                                          style: TextStyle(
+                                              color: Color.fromARGB(
+                                                  255, 255, 255, 255),
+                                              fontSize: 25)),
+                                      if (_editProfile) // Show plus button only in edit mode
+                                        IconButton(
+  onPressed: () => _addContact(context),
+  icon: CircleAvatar(
+    radius: 15, // Half of the desired total icon size (30 / 2) for the white circle
+    backgroundColor: const Color.fromARGB(166, 38, 134, 203), // The white circular background
+    child: const Icon(
+      Icons.add, // Changed to a simpler plus icon
+      color: Colors.white, // The blue color for the plus sign itself (now fully opaque)
+      size: 20, // A slightly smaller size for the plus sign to fit inside the white circle
+    ),
+  ),
+),
+                                    ],
                                   ),
-                                  borderRadius: BorderRadius.circular(
-                                      10.0), // Optional: rounded corners for the margin
-                                ),
-                                child: CenteredScrollingList(
-                                  contacts: _contacts,
-                                  onDelete: (index) =>
-                                      _deleteContact(context, index),
-                                  onEdit: (index) =>
-                                      _editContact(context, index),
-                                  editMode: _editProfile,
-                                ),
-                              ),
-                              Container(
-                                child: Column(
-                                  children: [
-                                    ElevatedButton(
-                                      onPressed: () => _addContact(context),
-                                      child: const Text('Add Contact'),
+                                  Container(
+                                    height: 300,
+                                    width: 300,
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 10),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: const Color.fromARGB(107, 132, 167,
+                                            187), // White margin color
+                                        width:
+                                            4.0, // Thick margin width (adjust as needed)
+                                      ),
+                                      borderRadius: BorderRadius.circular(
+                                          10.0), // Optional: rounded corners for the margin
                                     ),
-                                    SizedBox(height: 5),
-                                    ElevatedButton(
-                                      onPressed: () {
-                                        _logout(context);
-                                      },
-                                      child: Text("Logout of this device"),
+                                    child: CenteredScrollingList(
+                                      contacts: _contacts,
+                                      onDelete: (index) =>
+                                          _deleteContact(context, index),
+                                      onEdit: (index) =>
+                                          _editContact(context, index),
+                                      editMode: _editProfile,
                                     ),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Text("Edit mode:",
-                                            style: TextStyle(
-                                                color: Color.fromARGB(
-                                                    255, 255, 255, 255),
-                                                fontSize: 15)),
-                                        Switch(
-                                          value: _editProfile,
-                                          onChanged: (value) {
-                                            setState(() {
-                                              _editProfile = value;
-                                            });
-                                          },
-                                        )
-                                      ],
-                                    ),
-                                    SizedBox(height: 80)
-                                  ],
-                                ),
-                              ),
-                            ])))),
+                                  ),
+                                 SizedBox(height:60)
+                                ])))),
                   );
                 },
               ),
@@ -735,18 +938,25 @@ class _LiveLocationContentState extends State<LiveLocationContent> {
               child: Column(
                 children: [
                   ElevatedButton(
-                    onPressed: () {
-                      _openGoogleMaps();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color.fromARGB(
-                          50, 255, 255, 255), // Make the button transparent
-                      foregroundColor: Colors.white, // Text color
-                      elevation: 0, // Remove shadow
-                    ),
-                    child: const Text('Open Google Maps'),
-                  ),
-                  SizedBox(height: 50)
+  onPressed: () {
+    _openGoogleMaps();
+  },
+  style: ElevatedButton.styleFrom(
+    backgroundColor: const Color.fromARGB(255, 26, 51, 57), // Keep button background color
+    foregroundColor: Colors.white, // Text color
+    elevation: 8, // Increase elevation to create a noticeable shadow
+    shadowColor: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.5), // Custom shadow color with some opacity
+    shape: RoundedRectangleBorder( // Define the shape for the border
+      borderRadius: BorderRadius.circular(20), // Optional: add some corner radius if desired
+      side: const BorderSide(
+        color: Color.fromARGB(106, 38, 79, 82), // White border color
+        width: 2, // Border thickness
+      ),
+    ),
+  ),
+  child: const Text('Open Google Maps'),
+),
+                  const SizedBox(height: 50)
                 ],
               ),
             ),

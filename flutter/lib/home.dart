@@ -9,7 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
-import 'help_page.dart';
+import 'help_page.dart'; // Make sure this import is correct
 import 'dart:io';
 
 class HomeScreen extends StatefulWidget {
@@ -21,12 +21,38 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String? savedDeviceId;
-  bool deviceIdStored = false; // Add this variable
+  bool deviceIdStored = false;
+  bool notificationsEnabled = true;
+
+  // Removed: _nameController, _userName, _isNameEditing, _nameFocusNode
 
   @override
   void initState() {
     super.initState();
     _loadDeviceId();
+    _loadNotificationSetting();
+    // Removed: _loadUserName()
+  }
+
+  @override
+  void dispose() {
+    // Removed: _nameController.dispose(), _nameFocusNode.dispose()
+    super.dispose();
+  }
+
+  void _loadNotificationSetting() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
+    });
+  }
+
+  void _toggleNotifications() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      notificationsEnabled = !notificationsEnabled;
+      prefs.setBool('notificationsEnabled', notificationsEnabled);
+    });
   }
 
   Future<void> _loadDeviceId() async {
@@ -40,12 +66,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // Removed: _loadUserName() and _saveUserName() methods
+
   Future<void> _saveDeviceId(String deviceId) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('deviceId', deviceId);
     if (mounted) {
       savedDeviceId = deviceId;
-      deviceIdStored = true; // Set to true when deviceId is stored
+      deviceIdStored = true;
       setState(() {});
     }
   }
@@ -67,17 +95,15 @@ class _HomeScreenState extends State<HomeScreen> {
           await _saveDeviceId(deviceId);
           print("deviceId after _saveDeviceId: $deviceId");
 
-          // Navigate immediately after saving the device ID
           if (mounted) {
             print("Navigating immediately after saving deviceId");
             await Navigator.push(
-              // Await the push to ensure completion before proceeding.
               context,
               MaterialPageRoute(
                 builder: (context) => DevicePage(deviceId: savedDeviceId!),
               ),
             );
-            return; // Exit the function to prevent further execution.
+            return;
           }
         } else {
           if (mounted) {
@@ -95,12 +121,10 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    // Navigate only if deviceId is already stored and button is pressed again.
     if (deviceIdStored && mounted) {
       print("mounted: $mounted");
       print("Navigating with deviceId: $savedDeviceId");
       await Navigator.push(
-        // Await the push here as well.
         context,
         MaterialPageRoute(
           builder: (context) => DevicePage(deviceId: savedDeviceId!),
@@ -110,25 +134,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<String?> _getDeviceId(BuildContext context) async {
-    String? deviceId = await _showDeviceIdInputDialog(context);
-    if (deviceId == null || deviceId.isEmpty) {
-      deviceId = await _scanQRCode(context);
-    }
-    if (deviceId == null || deviceId.isEmpty) {
-      deviceId = await _uploadQRCode(context);
-    }
-    return deviceId;
-  }
-
-  Future<bool> _checkDeviceIdInFirestore(String deviceId) async {
-    final docSnapshot = await FirebaseFirestore.instance
-        .collection('devices')
-        .doc(deviceId)
-        .get();
-    return docSnapshot.exists;
-  }
-
-  Future<String?> _showDeviceIdInputDialog(BuildContext context) async {
     String? deviceId;
     return showDialog<String>(
       context: context,
@@ -178,33 +183,28 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<bool> _checkDeviceIdInFirestore(String deviceId) async {
+    final docSnapshot = await FirebaseFirestore.instance
+        .collection('devices')
+        .doc(deviceId)
+        .get();
+    return docSnapshot.exists;
+  }
+
   Future<String?> _scanQRCode(BuildContext context) async {
     final status = await Permission.camera.request();
-    if (status.isGranted) {
-      try {
-        return await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => Scaffold(
-              appBar: AppBar(title: const Text('Scan QR Code')),
-              body: MobileScanner(
-                onDetect: (capture) {
-                  final List<Barcode> barcodes = capture.barcodes;
-                  if (barcodes.isNotEmpty) {
-                    Navigator.pop(context, barcodes.first.rawValue);
-                  }
-                },
-              ),
-            ),
-          ),
-        );
-      } catch (e) {
-        print("Error during QR scan: $e");
-        _showSnackBar(context, 'Error during QR scan: $e');
-        return null;
-      }
-    } else {
+    if (!status.isGranted) {
       _showSnackBar(context, 'Camera permission denied');
+      return null;
+    }
+    try {
+      final scannedCode = await Navigator.push<String>(
+        context,
+        MaterialPageRoute(builder: (_) => const QRScannerPage()),
+      );
+      return scannedCode;
+    } catch (e) {
+      _showSnackBar(context, 'Error during QR scan: $e');
       return null;
     }
   }
@@ -273,11 +273,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   elevation: 0,
                   actions: [
                     IconButton(
-                      icon: const Icon(
-                        Icons.notifications,
-                        color: Color.fromRGBO(255, 255, 255, 1),
+                      icon: Icon(
+                        notificationsEnabled
+                            ? Icons.notifications
+                            : Icons.notifications_off,
+                        color: Colors.white,
                       ),
-                      onPressed: () {},
+                      onPressed: _toggleNotifications,
                     ),
                     const SizedBox(width: 230),
                     IconButton(
@@ -290,6 +292,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(width: 20),
                   ],
                 ),
+                // Removed: Name Container and TextField
                 Expanded(
                   child: Center(
                       child: Container(
@@ -297,12 +300,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: Color.fromARGB(32, 255, 255, 255),
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
-                        // Add boxShadow
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.3), // Shadow color
-                          spreadRadius: 3, // Spread radius
-                          blurRadius: 7, // Blur radius
-                          offset: Offset(0, 3), // Offset in x and y direction
+                          color: Colors.black.withOpacity(0.3),
+                          spreadRadius: 3,
+                          blurRadius: 7,
+                          offset: Offset(0, 3),
                         ),
                       ],
                     ),
@@ -463,5 +465,48 @@ class _AnimatedGradientContainerState extends State<AnimatedGradientContainer>
                   ),
                   child: widget.child));
         });
+  }
+}
+
+class QRScannerPage extends StatefulWidget {
+  const QRScannerPage({Key? key}) : super(key: key);
+
+  @override
+  _QRScannerPageState createState() => _QRScannerPageState();
+}
+
+class _QRScannerPageState extends State<QRScannerPage> {
+  late MobileScannerController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = MobileScannerController();
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  bool _hasScanned = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Scan QR Code')),
+      body: MobileScanner(
+        controller: controller,
+        onDetect: (capture) {
+          if (_hasScanned) return;
+          final List<Barcode> barcodes = capture.barcodes;
+          if (barcodes.isNotEmpty && barcodes.first.rawValue != null) {
+            _hasScanned = true;
+            Navigator.of(context).pop(barcodes.first.rawValue);
+          }
+        },
+      ),
+    );
   }
 }

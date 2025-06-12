@@ -42,8 +42,7 @@ including all the essential features.
     Companion App
     A dedicated mobile app that allows volunteers to respond during emergencies and enables friends or caregivers to configure device settings.
 
-    Proximity
-    Real-time lerping of vibration intensity based on the depth/distance of obstacle.
+
 
 
 Note :    
