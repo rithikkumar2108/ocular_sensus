@@ -35,7 +35,9 @@ including all the essential features.
 
         Local responders are notified immediately.
 
-        If no help is found, relatives are alerted via SMS.
+        If no help is found within a small range, the range is incrementally expanded.
+
+        If assistance is still unattainable within the maximum range, relatives are alerted via SMS.
 
         Auto-activates if the device detects the user has fainted or is immobile for a long time.
 
