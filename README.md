@@ -19,30 +19,30 @@ including all the essential features.
 
 ### Key Features
 
-    Environmental Analysis  (GEMINI API)
-    Uses AI to analyze surroundings and audibly describe what’s nearby.
-    Detects objects, people, signs, and hazards. Users can ask questions like:
+Environmental Analysis  (GEMINI API)
+Uses AI to analyze surroundings and audibly describe what’s nearby.
+Detects objects, people, signs, and hazards. Users can ask questions like:
 
-        “Where is the bottle in front of me?”
-        Output: “It’s on the shelf to your right.”
+    “Where is the bottle in front of me?”
+    Output: “It’s on the shelf to your right.”
 
-    Navigation (GMAPS API)
-    GPS navigation with Google Maps integration.
-    Directional guidance is provided via gentle haptic feedback and audio cues to ensure smooth travel.
+Navigation (GMAPS API)
+GPS navigation with Google Maps integration.
+Directional guidance is provided via gentle haptic feedback and audio cues to ensure smooth travel.
 
-    Emergency System
-    A built-in emergency system sends the user’s location to a secure server in case of emergency (Firebase)
+Emergency System
+A built-in emergency system sends the user’s location to a secure server in case of emergency (Firebase)
 
-        Local responders are notified immediately.
+    Local responders are notified immediately.
 
-        If no help is found within a small range, the range is incrementally expanded.
+    If no help is found within a small range, the range is incrementally expanded.
 
-        If assistance is still unattainable within the maximum range, relatives are alerted via SMS.
+    If assistance is still unattainable within the maximum range, relatives are alerted via SMS.
 
-        Auto-activates if the device detects the user has fainted or is immobile for a long time.
+    Auto-activates if the device detects the user has fainted or is immobile for a long time.
 
-    Companion App
-    A dedicated mobile app that allows volunteers to respond during emergencies and enables friends or caregivers to configure device settings.
+Companion App
+A dedicated mobile app that allows volunteers to respond during emergencies and enables friends or caregivers to configure device settings.
 
 
 
