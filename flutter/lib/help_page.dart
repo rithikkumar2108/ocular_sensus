@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,9 +19,6 @@ class HelpPage extends StatefulWidget {
 }
 
 class _HelpPageState extends State<HelpPage> {
-  final FlutterLocalNotificationsPlugin _notificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-  final Set<String> _notifiedDeviceIds = {};
   final List<Map<String, dynamic>> _emergencyDevices = [];
   String? _activePopupDeviceId;
   bool _isDialogShowing = false;
@@ -42,7 +38,6 @@ class _HelpPageState extends State<HelpPage> {
   @override
   void initState() {
     super.initState();
-    _initNotification();
     _initializeAppStreams();
   }
 
@@ -53,36 +48,10 @@ class _HelpPageState extends State<HelpPage> {
     super.dispose();
   }
 
-  
-  Future<void> _initNotification() async {
-    await _requestNotificationPermission();
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const initSettings = InitializationSettings(android: androidInit);
-    await _notificationsPlugin.initialize(initSettings);
-  }
 
-  
-  Future<void> _requestNotificationPermission() async {
-    if (await Permission.notification.isDenied) {
-      final status = await Permission.notification.request();
-      if (status.isPermanentlyDenied) {
-        if (mounted) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _showPermissionDeniedDialog(
-              'Notification access is permanently denied. Please enable it from app settings to receive emergency alerts.',
-              'Notification Permission Denied',
-            );
-          });
-        }
-      }
-    }
-  }
-
-  
   Future<void> _initializeAppStreams() async {
     if (!mounted) return;
 
-    
     setState(() {
       _isLoadingData = true;
       _isLocationStreamInitialized = false;
@@ -90,11 +59,9 @@ class _HelpPageState extends State<HelpPage> {
       _emergencyDevices.clear();
       _currentPosition = null;
       _latestFirestoreDocs = [];
-      _notifiedDeviceIds.clear();
       _locationIssueMessage = null; 
     });
 
-    
     if (_permissionRequestCompleter != null &&
         !_permissionRequestCompleter!.isCompleted) {
       print(
@@ -155,7 +122,6 @@ class _HelpPageState extends State<HelpPage> {
         return; 
       }
 
-      
       try {
         _currentPosition = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high,
@@ -179,7 +145,6 @@ class _HelpPageState extends State<HelpPage> {
         }
       }
 
-      
       _startLocationStream();
       _startFirestoreStream();
     } finally {
@@ -190,7 +155,6 @@ class _HelpPageState extends State<HelpPage> {
     }
   }
 
-  
   void _startLocationStream() {
     _positionStreamSubscription?.cancel(); 
 
@@ -238,7 +202,6 @@ class _HelpPageState extends State<HelpPage> {
     );
   }
 
-  
   void _startFirestoreStream() {
     _firestoreSubscription?.cancel();
 
@@ -269,7 +232,6 @@ class _HelpPageState extends State<HelpPage> {
     });
   }
 
-  
   void _updateNearbyDevices() async {
     if (!mounted) return;
 
@@ -280,7 +242,6 @@ class _HelpPageState extends State<HelpPage> {
         'DEBUG: _isFirestoreStreamInitialized: $_isFirestoreStreamInitialized');
     print('DEBUG: _currentPosition: $_currentPosition');
 
-    
     if (_isLocationStreamInitialized && _isFirestoreStreamInitialized && _isLoadingData) {
       setState(() {
         _isLoadingData = false;
@@ -288,7 +249,6 @@ class _HelpPageState extends State<HelpPage> {
       });
     }
 
-    
     if (_currentPosition == null) {
       print(
           'DEBUG: _currentPosition is null. Cannot calculate distances. Displaying location issue message.');
@@ -301,7 +261,7 @@ class _HelpPageState extends State<HelpPage> {
     }
 
     final prefs = await SharedPreferences.getInstance();
-    final notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
+    
     final List<Map<String, dynamic>> tempNearbyDevices = [];
     final Set<String> currentEmergencyDeviceIds = {};
 
@@ -315,14 +275,12 @@ class _HelpPageState extends State<HelpPage> {
 
       final lat = data['latitude'];
       final lng = data['longitude'];
-      final threshold = (data['emergency_threshold'] as num?)?.toDouble() ?? 0.0;
+      final threshold = (data['emergency_threshold'] as num?)?.toDouble() ?? 0.0; 
 
       print('DEBUG: Device ID: $deviceId, Emergency: ${data['emergency']}, isHelpComing: ${data['isHelpComing']}, Lat: $lat, Lng: $lng, Threshold: $threshold');
 
-      
       if (lat != null &&
           lng != null &&
-          threshold > 0 &&
           (data['emergency'] == true) &&
           (data['isHelpComing'] == false)) {
         final distance = Geolocator.distanceBetween(
@@ -333,23 +291,25 @@ class _HelpPageState extends State<HelpPage> {
         );
         print('DEBUG: Distance to $deviceId: ${distance.toStringAsFixed(2)} meters');
 
-        if (distance <= threshold) {
+        
+        
+        if (threshold == 0.0 || distance <= threshold) {
           tempNearbyDevices.add(data);
           print('DEBUG: Device $deviceId is nearby (${distance.toStringAsFixed(2)}m within ${threshold.toStringAsFixed(2)}m)');
-          if (notificationsEnabled && !_notifiedDeviceIds.contains(deviceId)) {
-            await _showEmergencyNotification(data);
-            _notifiedDeviceIds.add(deviceId);
-            print('DEBUG: Notification shown for $deviceId');
-          }
+          
+          
+          
+          
+          
+          
         } else {
           print('DEBUG: Device $deviceId is NOT nearby (${distance.toStringAsFixed(2)}m > ${threshold.toStringAsFixed(2)}m)');
         }
       } else {
-        print('DEBUG: Device $deviceId failed conditions: lat/lng/threshold invalid, or emergency/isHelpComing mismatch (Emergency: ${data['emergency']}, HelpComing: ${data['isHelpComing']}).');
+        print('DEBUG: Device $deviceId failed conditions: lat/lng invalid, or emergency/isHelpComing mismatch (Emergency: ${data['emergency']}, HelpComing: ${data['isHelpComing']}).');
       }
     }
 
-    
     bool devicesChanged = false;
     if (_emergencyDevices.length != tempNearbyDevices.length) {
       devicesChanged = true;
@@ -375,7 +335,6 @@ class _HelpPageState extends State<HelpPage> {
       print('DEBUG: _emergencyDevices not changed, no setState called.');
     }
 
-    
     if (_activePopupDeviceId != null && _isDialogShowing) {
       if (!currentEmergencyDeviceIds.contains(_activePopupDeviceId)) {
         Navigator.of(context, rootNavigator: true).pop();
@@ -388,25 +347,8 @@ class _HelpPageState extends State<HelpPage> {
   }
 
   
-  Future<void> _showEmergencyNotification(Map<String, dynamic> device) async {
-    const androidDetails = AndroidNotificationDetails(
-      'emergency_channel',
-      'Emergency Notifications',
-      channelDescription: 'Emergency alert notifications',
-      importance: Importance.max,
-      priority: Priority.high,
-    );
-    const details = NotificationDetails(android: androidDetails);
-    await _notificationsPlugin.show(
-      device['deviceId'].hashCode,
-      'Emergency Alert!',
-      '${device['ownerName'] ?? "Someone"} needs help!',
-      details,
-      payload: 'emergency',
-    );
-  }
-
   
+
   void _showEmergencyDialog(Map<String, dynamic> device) {
     if (_isDialogShowing) {
       print('DEBUG: Dialog already showing for $_activePopupDeviceId. Skipping new dialog for ${device['deviceId']}.');
@@ -481,14 +423,12 @@ class _HelpPageState extends State<HelpPage> {
     });
   }
 
-  
   void _showMessage(String msg) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
 
-  
   void _showError(String msg) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -496,7 +436,6 @@ class _HelpPageState extends State<HelpPage> {
     }
   }
 
-  
   void _showPermissionDeniedDialog(String message, String title) {
     showDialog(
       context: context,
@@ -570,129 +509,126 @@ class _HelpPageState extends State<HelpPage> {
                       ],
                     ),
                     child: ListTile(
-  contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-  leading: GestureDetector( // <-- GestureDetector for full-screen image on tap
-    onTap: () {
-      final imageUrl = device['profilePic'] as String?;
-      if (imageUrl != null && imageUrl.isNotEmpty) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => Scaffold(
-              backgroundColor: Colors.black, // Dark background for the full-screen image
-              appBar: AppBar(
-                backgroundColor: Colors.black,
-                iconTheme: const IconThemeData(color: Colors.white), // White back arrow
-                elevation: 0, // No shadow for app bar
-              ),
-              body: Center(
-                child: Image.network(
-                  imageUrl,
-                  fit: BoxFit.contain, // Fit the image within the screen without cropping
-                  loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Center(
-                      child: CircularProgressIndicator(
-                        value: loadingProgress.expectedTotalBytes != null
-                            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                            : null,
-                        color: Colors.white, // White progress indicator
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      leading: GestureDetector( 
+                        onTap: () {
+                          final imageUrl = device['profilePic'] as String?;
+                          if (imageUrl != null && imageUrl.isNotEmpty) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => Scaffold(
+                                  backgroundColor: Colors.black, 
+                                  appBar: AppBar(
+                                    backgroundColor: Colors.black,
+                                    iconTheme: const IconThemeData(color: Colors.white), 
+                                    elevation: 0, 
+                                  ),
+                                  body: Center(
+                                    child: Image.network(
+                                      imageUrl,
+                                      fit: BoxFit.contain, 
+                                      loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+                                        if (loadingProgress == null) return child;
+                                        return Center(
+                                          child: CircularProgressIndicator(
+                                            value: loadingProgress.expectedTotalBytes != null
+                                                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                                : null,
+                                            color: Colors.white, 
+                                          ),
+                                        );
+                                      },
+                                      errorBuilder: (context, error, stackTrace) {
+                                        print('Error loading full-screen image: $error');
+                                        return const Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.broken_image, color: Colors.grey, size: 50),
+                                            SizedBox(height: 8),
+                                            Text('Image failed to load', style: TextStyle(color: Colors.grey)),
+                                          ],
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        child: Container( 
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle, 
+                            border: Border.all(
+                              color: Colors.white, 
+                              width: 1.0, 
+                            ),
+                          ),
+                          child: CircleAvatar(
+                            radius: 24, 
+                            backgroundColor: Colors.white.withOpacity(0.2), 
+                            backgroundImage: (device['profilePic'] is String && (device['profilePic'] as String).isNotEmpty)
+                                ? NetworkImage(device['profilePic'] as String) as ImageProvider<Object>?
+                                : null, 
+                            child: !(device['profilePic'] is String && (device['profilePic'] as String).isNotEmpty)
+                                ? const Icon(
+                                    Icons.person,
+                                    size: 30, 
+                                    color: Colors.white70,
+                                  )
+                                : null, 
+                          ),
+                        ),
                       ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    print('Error loading full-screen image: $error');
-                    return const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.broken_image, color: Colors.grey, size: 50),
-                        SizedBox(height: 8),
-                        Text('Image failed to load', style: TextStyle(color: Colors.grey)),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-        );
-      }
-    },
-    child: Container( // <-- Container for the white border
-      decoration: BoxDecoration(
-        shape: BoxShape.circle, // Ensures the border is circular
-        border: Border.all(
-          color: Colors.white, // White border color
-          width: 1.0, // Border thickness
-        ),
-      ),
-      child: CircleAvatar(
-        radius: 24, // Adjust radius as needed for the desired size of the profile picture
-        backgroundColor: Colors.white.withOpacity(0.2), // A subtle background for the avatar
-        backgroundImage: (device['profilePic'] is String && (device['profilePic'] as String).isNotEmpty)
-            ? NetworkImage(device['profilePic'] as String) as ImageProvider<Object>?
-            : null, // Use NetworkImage if URL exists
-        child: !(device['profilePic'] is String && (device['profilePic'] as String).isNotEmpty)
-            ? const Icon(
-                Icons.person,
-                size: 30, // Icon size if no image is available
-                color: Colors.white70,
-              )
-            : null, // Show default person icon if no image
-      ),
-    ),
-  ),
-  title: Text(
-    '${device['ownerName']}',
-    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w400),
-  ),
-  subtitle: const Text(
-    'Emergency!',
-    style: TextStyle(color: Colors.redAccent, fontSize: 14),
-  ),
-  onTap: () async {
-    print('DEBUG: ListTile tapped for device: ${device['deviceId']}');
+                      title: Text(
+                        '${device['ownerName']}',
+                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w400),
+                      ),
+                      subtitle: const Text(
+                        'Emergency!',
+                        style: TextStyle(color: Colors.redAccent, fontSize: 14),
+                      ),
+                      onTap: () async {
+                        print('DEBUG: ListTile tapped for device: ${device['deviceId']}');
 
-    final doc = await FirebaseFirestore.instance
-        .collection('devices')
-        .doc(device['deviceId'])
-        .get();
-    final currentEmergency = doc.data()?['emergency'] ?? false;
-    final currentIsHelpComing = doc.data()?['isHelpComing'] ?? false;
+                        final doc = await FirebaseFirestore.instance
+                            .collection('devices')
+                            .doc(device['deviceId'])
+                            .get();
+                        final currentEmergency = doc.data()?['emergency'] ?? false;
+                        final currentIsHelpComing = doc.data()?['isHelpComing'] ?? false;
 
-    print(
-        'DEBUG: Tapped device ${device['deviceId']} - Current Emergency: $currentEmergency, isHelpComing: $currentIsHelpComing');
+                        print(
+                            'DEBUG: Tapped device ${device['deviceId']} - Current Emergency: $currentEmergency, isHelpComing: $currentIsHelpComing');
 
-    if (!currentEmergency) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("This emergency has already ended.")),
-        );
-        setState(() {
-          // Assuming _emergencyDevices is accessible here
-          _emergencyDevices.removeWhere((d) => d['deviceId'] == device['deviceId']);
-          print('DEBUG: Removing ${device['deviceId']} from _emergencyDevices.');
-        });
-      }
-      return;
-    } else if (currentIsHelpComing) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text("Help is already on its way for this emergency.")),
-        );
-        setState(() {
-          // Assuming _emergencyDevices is accessible here
-          _emergencyDevices.removeWhere((d) => d['deviceId'] == device['deviceId']);
-          print('DEBUG: Removing ${device['deviceId']} from _emergencyDevices.');
-        });
-      }
-      return;
-    }
-    // Assuming _showEmergencyDialog is defined elsewhere
-    _showEmergencyDialog(device);
-  },
-)
+                        if (!currentEmergency) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("This emergency has already ended.")),
+                            );
+                            setState(() {
+                              _emergencyDevices.removeWhere((d) => d['deviceId'] == device['deviceId']);
+                              print('DEBUG: Removing ${device['deviceId']} from _emergencyDevices.');
+                            });
+                          }
+                          return;
+                        } else if (currentIsHelpComing) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text("Help is already on its way for this emergency.")),
+                            );
+                            setState(() {
+                              _emergencyDevices.removeWhere((d) => d['deviceId'] == device['deviceId']);
+                              print('DEBUG: Removing ${device['deviceId']} from _emergencyDevices.');
+                            });
+                          }
+                          return;
+                        }
+                        _showEmergencyDialog(device);
+                      },
+                    ),
                   ),
                 );
               },
@@ -745,41 +681,41 @@ class _HelpingMapPageState extends State<HelpingMapPage> with SingleTickerProvid
     _createCustomMarkerIcons();
     _fetchUserLocation();
   _resolveButtonAnimationController = AnimationController(
-    vsync: this, // 'this' refers to the SingleTickerProviderStateMixin
-    duration: const Duration(milliseconds: 500), // Duration of the animation
+    vsync: this, 
+    duration: const Duration(milliseconds: 500), 
   );
 
   _slideAnimation = Tween<Offset>(
-    begin: const Offset(-1.0, 0.0), // Starts off-screen to the left
-    end: Offset.zero, // Ends at its normal position
+    begin: const Offset(-1.0, 0.0), 
+    end: Offset.zero, 
   ).animate(CurvedAnimation(
     parent: _resolveButtonAnimationController,
-    curve: Curves.easeOutCubic, // Smooth acceleration/deceleration
+    curve: Curves.easeOutCubic, 
   ));
 
   _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
     CurvedAnimation(
       parent: _resolveButtonAnimationController,
-      curve: Curves.easeIn, // Smooth fade-in
+      curve: Curves.easeIn, 
     ),
   );
 
-  // --- NEW: Initial check for animation state after first frame ---
+  
   WidgetsBinding.instance.addPostFrameCallback((_) {
     _updateResolveButtonAnimation();
   });
 }
 
   void _updateResolveButtonAnimation() {
-  // Assuming 'isHelping' and '_showResolveButton' are state variables
+  
   final bool isCurrentlyVisible = isHelping && _showResolveButton;
 
   if (isCurrentlyVisible && !_wasResolveButtonVisible) {
-    _resolveButtonAnimationController.forward(); // Animate in
+    _resolveButtonAnimationController.forward(); 
   } else if (!isCurrentlyVisible && _wasResolveButtonVisible) {
-    _resolveButtonAnimationController.reverse(); // Animate out
+    _resolveButtonAnimationController.reverse(); 
   }
-  _wasResolveButtonVisible = isCurrentlyVisible; // Update tracker
+  _wasResolveButtonVisible = isCurrentlyVisible; 
 }
 
   void _checkDeviceDataAndInitialize() {
@@ -819,7 +755,7 @@ class _HelpingMapPageState extends State<HelpingMapPage> with SingleTickerProvid
   @override
 void didUpdateWidget(covariant HelpingMapPage oldWidget) {
   super.didUpdateWidget(oldWidget);
-  // --- NEW: Trigger animation when relevant state changes ---
+  
   _updateResolveButtonAnimation();
 }
 
@@ -828,18 +764,18 @@ void didUpdateWidget(covariant HelpingMapPage oldWidget) {
 
 
   Future<void> _fetchUserLocation() async {
-  // Your logic to get the current location, for example using the 'geolocator' package
-  // This is just an example, use your actual location implementation
+  
+  
   try {
     Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
     LatLng userLocation = LatLng(position.latitude, position.longitude);
 
-    // 3. Once location is available, call the function to update the map
+    
     _updateUserLocationMarker(userLocation);
 
   } catch (e) {
     print("Failed to get user location: $e");
-    // Handle location errors (e.g., permissions denied)
+    
   }
 }
 
@@ -873,13 +809,13 @@ void didUpdateWidget(covariant HelpingMapPage oldWidget) {
 
   Future<BitmapDescriptor> _getCustomMarkerBitmap({
   required String label,
-  required Color color, // Fallback color if no image is available
+  required Color color, 
   String? imageUrl,
   double fontSize = 30,
-  double imageSize = 100.0, // Diameter of the profile picture area
-  double padding = 10.0, // Padding around the entire marker content
-  double borderWidth = 4.0, // Thickness of the white border
-  Color borderColor = Colors.white, // Color of the border
+  double imageSize = 100.0, 
+  double padding = 10.0, 
+  double borderWidth = 4.0, 
+  Color borderColor = Colors.white, 
 }) async {
   final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
   final Canvas canvas = Canvas(pictureRecorder);
@@ -890,7 +826,7 @@ void didUpdateWidget(covariant HelpingMapPage oldWidget) {
     text: TextSpan(
       text: label,
       style: TextStyle(
-        color: Colors.black, // Text color
+        color: Colors.black, 
         fontSize: fontSize,
         fontWeight: FontWeight.bold,
         shadows: [
@@ -905,16 +841,16 @@ void didUpdateWidget(covariant HelpingMapPage oldWidget) {
   );
   textPainter.layout();
 
-  // Calculate effective dimensions, accounting for the border
-  final double profileCircleRadius = imageSize / 2; // Radius of the actual image content
-  final double borderOuterRadius = profileCircleRadius + borderWidth; // Radius including the border
+  
+  final double profileCircleRadius = imageSize / 2; 
+  final double borderOuterRadius = profileCircleRadius + borderWidth; 
 
-  // Total width/height of the marker icon
+  
   final double contentWidth = textPainter.width > (borderOuterRadius * 2) ? textPainter.width : (borderOuterRadius * 2);
   final double totalWidth = contentWidth + padding * 2;
-  final double totalHeight = (borderOuterRadius * 2) + textPainter.height + padding * 2; // Image area + text area + padding
+  final double totalHeight = (borderOuterRadius * 2) + textPainter.height + padding * 2; 
 
-  // Draw transparent background for the entire marker area
+  
   canvas.drawRect(Rect.fromLTWH(0, 0, totalWidth, totalHeight), Paint()..color = Colors.transparent);
   canvas.save();
 
@@ -929,55 +865,55 @@ void didUpdateWidget(covariant HelpingMapPage oldWidget) {
       }
     } catch (e) {
       print('Error loading image for marker from URL ($imageUrl): $e');
-      // If image loading fails, profileImage remains null, and fallback will be used
+      
     }
   }
 
-  // Calculate the center of the image/circle area
+  
   final double imageAreaCenterX = totalWidth / 2;
-  final double imageAreaCenterY = padding + profileCircleRadius; // Position image above text, with padding
+  final double imageAreaCenterY = padding + profileCircleRadius; 
 
-  // --- Draw the border (if an image is present) ---
+  
   bool hasImageContent = profileImage != null;
 
   if (hasImageContent) {
     final Paint borderPaint = Paint()
       ..color = borderColor
-      ..style = PaintingStyle.stroke // Draw only the outline
+      ..style = PaintingStyle.stroke 
       ..strokeWidth = borderWidth;
-    // Draw the border circle around the *outer* radius
+    
     canvas.drawCircle(Offset(imageAreaCenterX, imageAreaCenterY), borderOuterRadius, borderPaint);
   }
 
-  // --- Clip path for the actual image content (inner circle) ---
-  // The image itself should be drawn within 'imageSize' diameter
+  
+  
   canvas.clipPath(Path()..addOval(Rect.fromCircle(center: Offset(imageAreaCenterX, imageAreaCenterY), radius: profileCircleRadius)));
 
   if (profileImage != null) {
-    // Draw the network image
+    
     final Rect srcRect = Rect.fromLTWH(0, 0, profileImage.width.toDouble(), profileImage.height.toDouble());
-    // Destination rect for drawing the image within the inner circle
+    
     final Rect dstRect = Rect.fromLTWH(
-      imageAreaCenterX - profileCircleRadius, // Left edge of the image
-      imageAreaCenterY - profileCircleRadius, // Top edge of the image
-      imageSize, // Width of the image
-      imageSize, // Height of the image
+      imageAreaCenterX - profileCircleRadius, 
+      imageAreaCenterY - profileCircleRadius, 
+      imageSize, 
+      imageSize, 
     );
     canvas.drawImageRect(profileImage, srcRect, dstRect, Paint());
   } else {
-    // Fallback: draw a colored circle if no image is provided or loaded
+    
     final Paint circlePaint = Paint()..color = color.withOpacity(0.8);
     canvas.drawCircle(Offset(imageAreaCenterX, imageAreaCenterY), profileCircleRadius, circlePaint);
   }
 
-  canvas.restore(); // Restore the canvas state (removes the clipping path)
+  canvas.restore(); 
 
-  // Paint the label (text) below the image
+  
   final double textX = (totalWidth - textPainter.width) / 2;
-  final double textY = padding + (borderOuterRadius * 2) + 5; // Position text below the image/border area + some spacing
+  final double textY = padding + (borderOuterRadius * 2) + 5; 
   textPainter.paint(canvas, Offset(textX, textY));
 
-  // End recording and convert to BitmapDescriptor
+  
   final ui.Image customMarkerImage = await pictureRecorder.endRecording().toImage(
     totalWidth.toInt(),
     totalHeight.toInt(),
@@ -986,16 +922,16 @@ void didUpdateWidget(covariant HelpingMapPage oldWidget) {
   return BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
 }
 
-  // Assume this is inside your StatefulWidget's State class,
-// and `_yourLocationMarkerIcon`, `_emergencyMarkerIcon`, `_markers` are declared
-// as state variables (e.g., late BitmapDescriptor? _yourLocationMarkerIcon;).
-// Also assume `widget.device` is accessible and contains 'profilePic', 'ownerName', etc.
-// And `context` is available.
+  
+
+
+
+
 
 
 
 Future<void> _createCustomMarkerIcons() async {
-  // --- Your Location Marker (Reverted to custom bitmap for text on circle) ---
+  
   _yourLocationMarkerIcon = await _getCustomMarkerBitmap(
     label: 'You',
     color: const Color.fromARGB(255, 0, 42, 69),
@@ -1005,10 +941,10 @@ Future<void> _createCustomMarkerIcons() async {
     borderWidth: 0.0,
   );
 
-  // Get profile picture URL for the emergency marker
+  
   final String? profilePicUrl = widget.device?['profilePic'];
 
-  // --- Emergency Marker (with profile picture and white border) ---
+  
   _emergencyMarkerIcon = await _getCustomMarkerBitmap(
     label: widget.device?['ownerName'] ?? 'Emergency',
     color: Colors.red,
@@ -1020,12 +956,12 @@ Future<void> _createCustomMarkerIcons() async {
     borderColor: Colors.white,
   );
 
-  // --- Initial Placement of Emergency Marker (Corrected Marker ID) ---
+  
   final double lat = widget.device?['latitude'] ?? 0;
   final double lng = widget.device?['longitude'] ?? 0;
 
   final Marker emergencyMarker = Marker(
-    markerId: const MarkerId('emergency_device_marker'), // <<< CORRECTED ID HERE
+    markerId: const MarkerId('emergency_device_marker'), 
     position: LatLng(lat, lng),
     icon: _emergencyMarkerIcon!,
     onTap: () {
@@ -1035,10 +971,10 @@ Future<void> _createCustomMarkerIcons() async {
   );
 
   setState(() {
-    _markers.clear(); // Clear all markers to start fresh (important for initial load)
+    _markers.clear(); 
     _markers.add(emergencyMarker);
 
-    // --- Initial Placement of User Location Marker ---
+    
     if (_yourLocation != null) {
       _markers.add(Marker(
         markerId: const MarkerId('your_location'),
@@ -1056,7 +992,7 @@ Future<void> _createCustomMarkerIcons() async {
   
 
   void _updateUserLocationMarker(LatLng userLocation) {
-  // Ensure the icon has been created
+  
   if (_yourLocationMarkerIcon == null) return;
 
   final Marker userMarker = Marker(
@@ -1066,23 +1002,23 @@ Future<void> _createCustomMarkerIcons() async {
   );
 
   setState(() {
-    // Store the location
+    
     _yourLocation = userLocation;
-    // Remove old 'your_location' marker if it exists and add the new one
+    
     _markers.removeWhere((m) => m.markerId.value == 'your_location');
     _markers.add(userMarker);
   });
 }
 
   void _updateDeviceLocationMarker(LatLng deviceLocation) {
-  // Ensure the emergency marker icon has been successfully created.
+  
   if (_emergencyMarkerIcon == null) {
     print('Warning: _emergencyMarkerIcon is null. Cannot update device marker.');
     return;
   }
 
   final Marker deviceMarker = Marker(
-    markerId: const MarkerId('emergency_device_marker'), // Use a consistent ID
+    markerId: const MarkerId('emergency_device_marker'), 
     position: deviceLocation,
     icon: _emergencyMarkerIcon!,
     onTap: () {
@@ -1092,7 +1028,7 @@ Future<void> _createCustomMarkerIcons() async {
   );
 
   setState(() {
-    helpingLocation = deviceLocation; // Update the state variable that holds device location
+    helpingLocation = deviceLocation; 
     _markers.removeWhere((m) => m.markerId.value == 'emergency_device_marker');
     _markers.add(deviceMarker);
   });
@@ -1163,7 +1099,7 @@ Future<void> _createCustomMarkerIcons() async {
         print(1);
         _listenForEmergencyStatusChange();
         print(2);
-        _fetchUserLocation(); //please
+        _fetchUserLocation(); 
         print(3);
 
         double distance = Geolocator.distanceBetween(
@@ -1207,16 +1143,16 @@ void _handleOtherHelperTookOver() async {
 }
 
   void _listenForEmergencyStatusChange() {
-  // Use widget.deviceId directly, assuming it's correctly passed to HelpingMapPage
+  
   final deviceId = widget.device?['deviceId'];
 
-  if (deviceId == null || deviceId.isEmpty) { // Added check for empty deviceId too
+  if (deviceId == null || deviceId.isEmpty) { 
     print('Error: deviceId is null or empty for emergency status listener.');
     _navigateToHomepageAndClearStack();
     return;
   }
 
-  // Cancel any existing listener to prevent duplicates
+  
   _emergencyStatusListener?.cancel();
 
   _emergencyStatusListener = FirebaseFirestore.instance
@@ -1231,30 +1167,30 @@ void _handleOtherHelperTookOver() async {
     if (snapshot.exists) {
       final data = snapshot.data() as Map<String, dynamic>;
 
-      // Extract emergency status fields
+      
       final bool currentEmergencyStatus = data['emergency'] as bool? ?? false;
       final bool currentIsHelpComing = data['isHelpComing'] as bool? ?? false;
       final String currentHelper = data['helper'] as String? ?? "";
 
-      // Extract latitude and longitude for the device
+      
       final double? lat = data['latitude'];
       final double? lng = data['longitude'];
 
-      // --- Handle Device Location Update ---
+      
       if (lat != null && lng != null) {
-        // If location data is valid and has changed
-        // Check if current data is different from stored, OR if stored was previously invalid
+        
+        
         if (!_hasValidHelpingLocation || helpingLocation.latitude != lat || helpingLocation.longitude != lng) {
-  final newHelpingLocation = LatLng(lat, lng); // Create the new LatLng here
+  final newHelpingLocation = LatLng(lat, lng); 
   setState(() {
-    helpingLocation = newHelpingLocation; // Assign the actual valid LatLng
-    _hasValidHelpingLocation = true; // Mark as valid
+    helpingLocation = newHelpingLocation; 
+    _hasValidHelpingLocation = true; 
   });
-          _updateDeviceLocationMarker(newHelpingLocation); // Pass the variable directly
+          _updateDeviceLocationMarker(newHelpingLocation); 
 
   print('Firebase Emergency Device Location Updated: $helpingLocation (VALID)');
 
-  // ... (rest of your logic like starting distance calculation timer) ...
+  
   if (_distanceCalculationTimer == null || !_distanceCalculationTimer!.isActive) {
     _startPeriodicDistanceCalculation();
     print('Starting periodic distance calculation due to new Firebase device location.');
@@ -1262,26 +1198,26 @@ void _handleOtherHelperTookOver() async {
   _updateResolveButtonAnimation();
 }
       } else {
-        // If location data is invalid/missing from Firebase (lat or lng are null)
-        // AND if our stored location was previously valid, then update it to the dummy value.
+        
+        
         if (_hasValidHelpingLocation) {
           setState(() {
-            helpingLocation = LatLng(0.0, 0.0); // <<< Assign your default/dummy LatLng
-            _hasValidHelpingLocation = false; // <<< Mark as INVALID (placeholder)
+            helpingLocation = LatLng(0.0, 0.0); 
+            _hasValidHelpingLocation = false; 
           });
           print('Firebase device location data for lat/lng is null or invalid. helpingLocation set to dummy.');
-          _distanceCalculationTimer?.cancel(); // Stop distance checks if location is gone
+          _distanceCalculationTimer?.cancel(); 
           _updateResolveButtonAnimation();
         }
       }
 
-      // --- Handle Emergency Status Changes ---
+      
       if (!currentEmergencyStatus) {
-        // Emergency has explicitly ended (emergency field is false)
+        
         _handleEmergencyEnded(true);
         return;
       } else {
-        // Emergency is still active, check helper status
+        
         final prefs = await SharedPreferences.getInstance();
         final String ourHelperName = prefs.getString('currentHelperName') ?? "";
 
@@ -1299,13 +1235,13 @@ void _handleOtherHelperTookOver() async {
         }
       }
     } else {
-      // Document no longer exists (implies emergency has ended/resolved)
+      
       _handleEmergencyEnded(true);
     }
   }, onError: (error) {
     print('Error receiving emergency updates from Firestore: $error');
     _showError('Failed to receive emergency updates. Please check connection.');
-    _handleEmergencyEnded(true); // Treat error as emergency ended and clean up
+    _handleEmergencyEnded(true); 
   });
 }
 
@@ -1319,27 +1255,27 @@ void _handleOtherHelperTookOver() async {
         isHelping = true;
       });
       await _updateHelperStatus(helperName, true);
-      _startPeriodicDistanceCalculation(); // CORRECT PLACE: Start timer here
+      _startPeriodicDistanceCalculation(); 
     } else {
       _showMessage("Please provide your name to help.");
       if (mounted) {
         setState(() {
           isHelping = false;
-          _showResolveButton = false; // Ensure button is hidden if user cancels
+          _showResolveButton = false; 
         });
       }
     }
   } else {
-    // When isHelping is toggled OFF
+    
     setState(() {
       isHelping = false;
-      _showResolveButton = false; // Explicitly set to false here
+      _showResolveButton = false; 
     });
-    _distanceCalculationTimer?.cancel(); // Stop the periodic checks
+    _distanceCalculationTimer?.cancel(); 
     await _updateHelperStatus("", false);
     _showMessage("You are no longer helping this emergency.");
   }
-  _updateResolveButtonAnimation(); // CORRECT PLACE: This call correctly reflects the updated state
+  _updateResolveButtonAnimation(); 
 }
   Future<void> _updateHelperStatus(String name, bool status, {bool shouldPop = false}) async {
     if (widget.device?['deviceId'] == null || !mounted || _isExitingPage) return;
@@ -1443,7 +1379,7 @@ void _handleOtherHelperTookOver() async {
   Future<bool> _markEmergencyAsResolved() async {
   final deviceId = widget.device?['deviceId'];
   if (deviceId == null || !mounted || _isExitingPage) {
-    return false; // Return false if deviceId is null or page is exiting
+    return false; 
   }
 
   final bool? confirm = await showDialog<bool>(
@@ -1465,7 +1401,7 @@ void _handleOtherHelperTookOver() async {
   );
 
   if (confirm != true) {
-    return false; // Return false if the user cancels the confirmation
+    return false; 
   }
 
   try {
@@ -1475,10 +1411,10 @@ void _handleOtherHelperTookOver() async {
       'helper': '',
     });
     _showMessage('Emergency successfully marked as resolved.');
-    return true; // Return true on successful resolution
+    return true; 
   } catch (e) {
     _showError('Failed to mark emergency as resolved: $e');
-    return false; // Return false if an error occurs during resolution
+    return false; 
   }
 }
 
@@ -1553,7 +1489,7 @@ void _handleOtherHelperTookOver() async {
       },
       child: Scaffold(
   backgroundColor: Colors.transparent,
-  // Extends the body (GoogleMap) behind the AppBar
+  
   extendBodyBehindAppBar: true,
   appBar: AppBar(
         title: Text(
@@ -1573,14 +1509,14 @@ void _handleOtherHelperTookOver() async {
     icon: const Icon(Icons.person),
     color: Colors.white,
     onPressed: () {
-      // Safely extract the deviceId from widget.device
+      
       final String? passedDeviceId = widget.device?['deviceId'];
 
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => TempProfilePage(
-            deviceId: passedDeviceId, // <<< Pass the data here!
+            deviceId: passedDeviceId, 
           ),
         ),
       );
@@ -1590,17 +1526,17 @@ void _handleOtherHelperTookOver() async {
       ),
   body: Stack(
     children: [
-      // --- 1. Google Map: Positioned to fill the entire background ---
+      
       Positioned.fill(
         child: GoogleMap(
           initialCameraPosition: CameraPosition(
-            target: helpingLocation, // Make sure helpingLocation is defined in your State
+            target: helpingLocation, 
             zoom: 15.0,
           ),
           onMapCreated: (GoogleMapController controller) {
-            mapController = controller; // Make sure mapController is declared in your State
-            // Animates the camera to show both locations if currentLocation is available
-            if (currentLocation != null) { // Make sure currentLocation is defined in your State
+            mapController = controller; 
+            
+            if (currentLocation != null) { 
               mapController.animateCamera(
                 CameraUpdate.newLatLngBounds(
                   LatLngBounds(
@@ -1621,42 +1557,42 @@ void _handleOtherHelperTookOver() async {
                           : helpingLocation.longitude),
                     ),
                   ),
-                  100.0, // Padding around the bounds
+                  100.0, 
                 ),
               );
             } else {
-              // If currentLocation isn't available, just center on helpingLocation
+              
               mapController.animateCamera(CameraUpdate.newLatLngZoom(helpingLocation, 15.0));
             }
           },
-          markers: _markers, // **Crucial**: This links to your _markers state variable
-          // You can add other map properties here if needed, e.g.,
-          // myLocationEnabled: true,
-          // myLocationButtonEnabled: true,
-          // zoomControlsEnabled: false,
+          markers: _markers, 
+          
+          
+          
+          
         ),
       ),
 
-      // --- 2. Container: "Emergency from..." - Placed just below the AppBar ---
+      
       Positioned(
-        // 'top' is calculated to be below the AppBar, accounting for system status bar
+        
         top: MediaQuery.of(context).padding.top + kToolbarHeight + 0.0,
-        left:0.0, // Horizontal margin from left
-        right: 0.0, // Horizontal margin from right (makes it less wide and centered)
+        left:0.0, 
+        right: 0.0, 
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
           decoration: BoxDecoration(
   color: const Color.fromARGB(219, 14, 47, 60),
-  borderRadius: const BorderRadius.only( // <<< Change is here
-    topLeft: Radius.circular(0.0),      // Top-left corner is sharp
-    topRight: Radius.circular(0.0),     // Top-right corner is sharp
-    bottomLeft: Radius.circular(0.0),  // Bottom-left corner is rounded
-    bottomRight: Radius.circular(0.0), // Bottom-right corner is rounded
+  borderRadius: const BorderRadius.only( 
+    topLeft: Radius.circular(0.0),      
+    topRight: Radius.circular(0.0),     
+    bottomLeft: Radius.circular(0.0),  
+    bottomRight: Radius.circular(0.0), 
   ),
  
 ),
           child: Column(
-            mainAxisSize: MainAxisSize.min, // Column takes minimum vertical space
+            mainAxisSize: MainAxisSize.min, 
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1666,7 +1602,7 @@ void _handleOtherHelperTookOver() async {
                     style: TextStyle(color: Colors.white, fontSize: 18),
                   ),
                   Switch(
-                    value: isHelping, // Make sure isHelping and _toggleHelping are defined in your State
+                    value: isHelping, 
                     onChanged: _toggleHelping,
                     activeColor: const Color.fromARGB(0, 76, 173, 175),
                     inactiveThumbColor: const Color.fromARGB(0, 255, 255, 255),
@@ -1679,23 +1615,23 @@ void _handleOtherHelperTookOver() async {
         ),
       ),
 
-      // --- 3. Container: "Emergency Resolved" - Placed in the bottom-left ---
+      
       if (isHelping && _showResolveButton) 
       Positioned(
-        // 'bottom' is calculated from the bottom edge, accounting for system safe area
+        
         bottom: MediaQuery.of(context).padding.bottom + 10.0,
-        left: 0.0, // Margin from the left edge
+        left: 0.0, 
         child: SlideTransition(
-        position: _slideAnimation, // <--- ADD THIS WIDGET
+        position: _slideAnimation, 
         child: FadeTransition(
         opacity: _fadeAnimation,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 2.0),
           decoration: BoxDecoration(
-            color: const Color.fromARGB(219, 14, 47, 60),// Consistent semi-transparent background
+            color: const Color.fromARGB(219, 14, 47, 60),
             borderRadius: const BorderRadius.only(
-              topLeft: Radius.zero,       // Sharp
-              bottomLeft: Radius.zero,    // Sharp
+              topLeft: Radius.zero,       
+              bottomLeft: Radius.zero,    
               topRight: Radius.circular(30.0),
               bottomRight: Radius.circular(30.0),
             ),boxShadow: [
@@ -1708,8 +1644,8 @@ void _handleOtherHelperTookOver() async {
             ],
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min, // Row takes minimum horizontal space
-            mainAxisAlignment: MainAxisAlignment.start, // Aligns content to the start (left)
+            mainAxisSize: MainAxisSize.min, 
+            mainAxisAlignment: MainAxisAlignment.start, 
             children: [
               const Text(
                 'Emergency Resolved?',
@@ -1721,7 +1657,7 @@ void _handleOtherHelperTookOver() async {
               ),
              
               Switch(
-                value: _isEmergencyResolved, // Make sure _isEmergencyResolved, _showResolveButton, _markEmergencyAsResolved are defined in your State
+                value: _isEmergencyResolved, 
                 onChanged: (isHelping && _showResolveButton)
                     ? (value) async {
                         if (value) {
@@ -1738,24 +1674,24 @@ void _handleOtherHelperTookOver() async {
                         }
                         _updateResolveButtonAnimation();
                       }
-                    : null, // Switch is disabled if conditions are not met
+                    : null, 
                 thumbColor: MaterialStateProperty.resolveWith<Color?>((Set<MaterialState> states) {
                   if (states.contains(MaterialState.disabled)) {
-                    return Colors.black54; // Thumb color when disabled
+                    return Colors.black54; 
                   }
                   if (states.contains(MaterialState.selected)) {
-                    return Colors.white; // Thumb color when active (on) and enabled
+                    return Colors.white; 
                   }
-                  return const Color.fromARGB(255, 255, 255, 255); // Thumb color when inactive (off) and enabled
+                  return const Color.fromARGB(255, 255, 255, 255); 
                 }),
                 trackColor: MaterialStateProperty.resolveWith<Color?>((Set<MaterialState> states) {
                   if (states.contains(MaterialState.disabled)) {
-                    return Colors.white12; // Track color when disabled
+                    return Colors.white12; 
                   }
                   if (states.contains(MaterialState.selected)) {
-                    return const Color.fromARGB(255, 76, 173, 175); // Track color when active (on) and enabled
+                    return const Color.fromARGB(255, 76, 173, 175); 
                   }
-                  return Colors.grey.withOpacity(0.5); // Track color when inactive (off) and enabled
+                  return Colors.grey.withOpacity(0.5); 
                 }),
               ),
             ],
