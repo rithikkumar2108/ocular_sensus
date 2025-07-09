@@ -28,7 +28,7 @@ Detects objects, people, signs, and hazards. Users can ask questions like:
 
 ### Navigation (GMAPS API)
 GPS navigation with Google Maps integration.
-Directional guidance is provided via gentle haptic feedback and audio cues to ensure smooth travel.
+Directional guidance is provided via audio cues to ensure smooth travel.
 
 ### Emergency System
 A built-in emergency system sends the user’s location to a secure server in case of emergency (Firebase)
